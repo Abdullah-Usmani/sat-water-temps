@@ -33,26 +33,26 @@ def get_token(user, password):
         raise SystemExit(f"Authentication failed: {err}")
 
 token = get_token(user, password)
-#token_new = "eyJ0eXAiOiJKV1QiLCJvcmlnaW4iOiJFYXJ0aGRhdGEgTG9naW4iLCJzaWciOiJlZGxqd3RwdWJrZXlfb3BzIiwiYWxnIjoiUlMyNTYifQ.eyJ0eXBlIjoiVXNlciIsInVpZCI6ImplcGh0aGF0IiwiZXhwIjoxNzM0MDAyNTMyLCJpYXQiOjE3Mjg4MTg1MzIsImlzcyI6Imh0dHBzOi8vdXJzLmVhcnRoZGF0YS5uYXNhLmdvdiJ9.sly-XS_g6K44wo0JKJ4quriQzVdfPOJsRSavYhww7z7OFttzSdUHeMwDBmezZhLnrk6YiNiSAWtogqRyU8zJSwamMo2ACfTxyoeRZ9EQ_5qtfOptDVUZqww26f95Rrsz58ygLG5tmRlZbUSmXXgLk9fyshuftduyMi6L34LcJrX10HkthgRKUWwVz8NTkoPboHAxGDPQlcKfKeAdN40Q7GWe4sOMeDdYA1AaF0ZeQAxG4aAr0z-7a3rtNwdQa5MvoPIsXMpqaIxM8BLZm82Yu8Wt79PH9Rvt14GnJGZ8LKMpYU8AWxKTmKg7liAw5R6THnOpwsFJxWc2fo5h6eBLNg"
+token_new = "eyJ0eXAiOiJKV1QiLCJvcmlnaW4iOiJFYXJ0aGRhdGEgTG9naW4iLCJzaWciOiJlZGxqd3RwdWJrZXlfb3BzIiwiYWxnIjoiUlMyNTYifQ.eyJ0eXBlIjoiVXNlciIsInVpZCI6ImplcGh0aGF0IiwiZXhwIjoxNzM0MDAyNTMyLCJpYXQiOjE3Mjg4MTg1MzIsImlzcyI6Imh0dHBzOi8vdXJzLmVhcnRoZGF0YS5uYXNhLmdvdiJ9.sly-XS_g6K44wo0JKJ4quriQzVdfPOJsRSavYhww7z7OFttzSdUHeMwDBmezZhLnrk6YiNiSAWtogqRyU8zJSwamMo2ACfTxyoeRZ9EQ_5qtfOptDVUZqww26f95Rrsz58ygLG5tmRlZbUSmXXgLk9fyshuftduyMi6L34LcJrX10HkthgRKUWwVz8NTkoPboHAxGDPQlcKfKeAdN40Q7GWe4sOMeDdYA1AaF0ZeQAxG4aAr0z-7a3rtNwdQa5MvoPIsXMpqaIxM8BLZm82Yu8Wt79PH9Rvt14GnJGZ8LKMpYU8AWxKTmKg7liAw5R6THnOpwsFJxWc2fo5h6eBLNg"
 
 # Get Today Date As End Date
 print("Setting Dates")
 today_date = datetime.now()
-today_date_str = today_date.strftime("%Y-%m-%d")
+today_date_str = today_date.strftime("%m-%d-%Y")
 ed = today_date_str
 
 # Get Yesterday Date as Start Date
 yesterday_date = today_date - timedelta(days=1)
-yesterday_date_str = yesterday_date.strftime("%Y-%m-%d")
+yesterday_date_str = yesterday_date.strftime("%m-%d-%Y")
 sd = yesterday_date_str
 
 # Products, Headers and layers
 product = "ECO_L2T_LSTE.002"
 headers = {
-    "Authorization": f"Bearer {token}",
+    "Authorization": f"Bearer {token['token']}",
     "Content-Type": "application/json"
 }
-layers = ["LST", "LST_err", "cloud", "Quality_flags"]
+layers = ["LST", "LST_err"]
 
 # Load the area of interest (ROI)
 print("Loading Regions of Interest")
@@ -66,7 +66,7 @@ def build_task_request(product, layers, roi, sd, ed):
         "task_type": "area",
         "task_name": "ECOStress_Request",
         "params": {
-            "dates": [{"startDate": sd}, {"endDate": ed}],
+            "dates": [{"startDate": sd, "endDate": ed}],
             "layers": [{"product": product, "layer": layer} for layer in layers],
             "geo": roi_json,  # Using GeoJSON for the region
             "output": {
@@ -80,14 +80,14 @@ def build_task_request(product, layers, roi, sd, ed):
 # Function to submit the task request to AppEEARS
 def submit_task(headers, task_request):
     url = 'https://appeears.earthdatacloud.nasa.gov/api/task'
-    response = requests.get(url, headers=headers, json=task_request)
+    response = requests.post(url, json=task_request, headers=headers)
     if response.status_code == 202:  # Task accepted
         print("Task submitted successfully!")
         return response.json()["task_id"]
     else:
         print(f"Task submission failed: {response.status_code}")
-    print(response.text)  # Print detailed error message
-    raise Exception(f"Task submission failed: {response.status_code}")
+        print(response.text)  # Print detailed error message
+        raise Exception(f"Task submission failed: {response.status_code}")
 
 # Function to check the task status
 def check_task_status(task_id, headers):
