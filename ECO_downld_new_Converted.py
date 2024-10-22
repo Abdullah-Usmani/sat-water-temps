@@ -114,7 +114,7 @@ def check_task_status(task_id, headers):
             time.sleep(30)
         else:
             raise Exception(f"Task failed with status: {status}")
-        return doneFlag
+    return doneFlag
     
 # getting response that isnt application/json - unexpected output: html/text
 # wrong URL was put in check_task_status - response.json()["status"] didn't exist
