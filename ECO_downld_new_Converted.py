@@ -1,23 +1,29 @@
 import os
 import time
 import requests
+import json
 import geopandas as gpd
 import rasterio
-import json
-from rasterio.merge import merge
 import numpy as np
-import pandas as pd
 from datetime import datetime, timedelta
 
 # Directory paths
 print("Setting Directory Paths")
-pt = "C:/Users/jepht/OneDrive/Desktop/Water Temp Sensors/ECOraw/"
-output_path = "C:/Users/jepht/OneDrive/Desktop/Water Temp Sensors/ECO/"
-roi_path = "C:/Users/jepht/OneDrive/Desktop/Water Temp Sensors/polygon/site_full_ext.shp"
+pt = r"C:\Users\Abdullah Usmani\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/ECOraw/"
+output_path = r"C:\Users\Abdullah Usmani\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/ECO/"
+roi_path = r"C:\Users\Abdullah Usmani\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/polygon/test/site_full_ext_Test.shp"
+
+if not os.path.exists(roi_path):
+    raise FileNotFoundError(f"The ROI shapefile does not exist at {roi_path}")
+
+try:
+    roi = gpd.read_file(roi_path)
+except Exception as e:
+    raise ValueError(f"Could not read the shapefile: {e}")
 
 # Define Earthdata login credentials (Replace with your actual credentials)
-user = 'JephthaT'
-password = '1#Big_Chilli'
+user = 'abdullahusmani1'
+password = 'haziqLOVERS123!'
 
 # Get token (API login via requests)
 def get_token(user, password):
@@ -33,7 +39,7 @@ def get_token(user, password):
         raise SystemExit(f"Authentication failed: {err}")
 
 token = get_token(user, password)
-token_new = "eyJ0eXAiOiJKV1QiLCJvcmlnaW4iOiJFYXJ0aGRhdGEgTG9naW4iLCJzaWciOiJlZGxqd3RwdWJrZXlfb3BzIiwiYWxnIjoiUlMyNTYifQ.eyJ0eXBlIjoiVXNlciIsInVpZCI6ImplcGh0aGF0IiwiZXhwIjoxNzM0MDAyNTMyLCJpYXQiOjE3Mjg4MTg1MzIsImlzcyI6Imh0dHBzOi8vdXJzLmVhcnRoZGF0YS5uYXNhLmdvdiJ9.sly-XS_g6K44wo0JKJ4quriQzVdfPOJsRSavYhww7z7OFttzSdUHeMwDBmezZhLnrk6YiNiSAWtogqRyU8zJSwamMo2ACfTxyoeRZ9EQ_5qtfOptDVUZqww26f95Rrsz58ygLG5tmRlZbUSmXXgLk9fyshuftduyMi6L34LcJrX10HkthgRKUWwVz8NTkoPboHAxGDPQlcKfKeAdN40Q7GWe4sOMeDdYA1AaF0ZeQAxG4aAr0z-7a3rtNwdQa5MvoPIsXMpqaIxM8BLZm82Yu8Wt79PH9Rvt14GnJGZ8LKMpYU8AWxKTmKg7liAw5R6THnOpwsFJxWc2fo5h6eBLNg"
+# token_new = "eyJ0eXAiOiJKV1QiLCJvcmlnaW4iOiJFYXJ0aGRhdGEgTG9naW4iLCJzaWciOiJlZGxqd3RwdWJrZXlfb3BzIiwiYWxnIjoiUlMyNTYifQ.eyJ0eXBlIjoiVXNlciIsInVpZCI6ImplcGh0aGF0IiwiZXhwIjoxNzM0MDAyNTMyLCJpYXQiOjE3Mjg4MTg1MzIsImlzcyI6Imh0dHBzOi8vdXJzLmVhcnRoZGF0YS5uYXNhLmdvdiJ9.sly-XS_g6K44wo0JKJ4quriQzVdfPOJsRSavYhww7z7OFttzSdUHeMwDBmezZhLnrk6YiNiSAWtogqRyU8zJSwamMo2ACfTxyoeRZ9EQ_5qtfOptDVUZqww26f95Rrsz58ygLG5tmRlZbUSmXXgLk9fyshuftduyMi6L34LcJrX10HkthgRKUWwVz8NTkoPboHAxGDPQlcKfKeAdN40Q7GWe4sOMeDdYA1AaF0ZeQAxG4aAr0z-7a3rtNwdQa5MvoPIsXMpqaIxM8BLZm82Yu8Wt79PH9Rvt14GnJGZ8LKMpYU8AWxKTmKg7liAw5R6THnOpwsFJxWc2fo5h6eBLNg"
 
 # Get Today Date As End Date
 print("Setting Dates")
@@ -91,33 +97,54 @@ def submit_task(headers, task_request):
 
 # Function to check the task status
 def check_task_status(task_id, headers):
-    print(task_id)
-    url = f"https://lpdaacsvc.cr.usgs.gov/appeears/api/task/{task_id}"
+    url = f"https://appeears.earthdatacloud.nasa.gov/api/task/{task_id}"
     while True:
         response = requests.get(url, headers=headers)
         status = response.json()["status"]
+        doneFlag = False
         if status == "done":
             print(f"Task {task_id} is complete!")
+            doneFlag = True
             break
-        elif status == "running":
-            print(f"Task {task_id} is still running. Checking again in 30 seconds...")
+        elif status == "processing":
+            print(f"Task {task_id} is still processing. Checking again in 30 seconds...")
+            time.sleep(30)
+        elif status == "queued":
+            print(f"Task {task_id} is still queued. Checking again in 30 seconds...")
             time.sleep(30)
         else:
             raise Exception(f"Task failed with status: {status}")
+    return doneFlag
+    
+# getting response that isnt application/json - unexpected output: html/text
+# wrong URL was put in check_task_status - response.json()["status"] didn't exist
+# no case for status == "queued"
+# no case for status == "processing", replaced "running" w/ "processing"
+# potential resubmission of requests
+# have simultaneous requests going
+# downloads are different. Get Bundle response, then get file_id, then refer to download link using file_id
+# idx loop switched, phase 1 - download requests, phase 2 - status checking.
+# more requests sent, faster response, and some tasks may complete before phase 2 begins.
+# in phase 2, implement - task 1/130, instead of just IDs + taskIDs being repeated in another line
 
 # Function to download results from AppEEARS
 def download_results(task_id, output_path, headers):
-    url = f"https://lpdaacsvc.cr.usgs.gov/appeears/api/task/{task_id}/bundle"
+    url = f"https://appeears.earthdatacloud.nasa.gov/api/bundle/{task_id}"
     response = requests.get(url, headers=headers)
     files = response.json()['files']
     for file in files:
-        download_url = file['fileURL']
-        local_filename = os.path.join(output_path, file['fileName'])
+        file_id = file['file_id']
+        local_filename = os.path.join(output_path, file['file_name'])
+        download_url = f"{url}/{file_id}"
         with requests.get(download_url, stream=True) as r:
             with open(local_filename, 'wb') as f:
                 for chunk in r.iter_content(chunk_size=8192):
                     f.write(chunk)
         print(f"Downloaded {local_filename}")
+
+
+
+
 
 # Function to process the raster files
 def process_rasters(output_folder):
@@ -144,7 +171,9 @@ def process_rasters(output_folder):
                 dst.write(lst_filtered, 1)
                 print(f"Filtered raster saved: {filtered_file}")
 
-# Loop through the ROI
+# Phase 1: Submit all tasks first
+task_ids = []  # List to hold task_ids and corresponding output folders
+
 for idx, row in roi.iterrows():
     # Create bounding box for ROI
     roi_bbox = row.geometry.bounds
@@ -156,19 +185,50 @@ for idx, row in roi.iterrows():
     # Build and submit task for the current ROI
     task_request = build_task_request(product, layers, roi_geometry, sd, ed)
     task_id = submit_task(headers, task_request)
-
-    # Check task status and wait for completion
-    check_task_status(task_id, headers)
+    print(f"Task ID: {task_id}")
+    
     # Construct directory path for saving data
     output_folder = os.path.join(pt, row['name'], row['location'])
     os.makedirs(output_folder, exist_ok=True)
     print(f"Output folder created: {output_folder}")
-    # Download the results for the current ROI
-    download_results(task_id, output_folder, headers)
+    
+    # Store the task_id and its corresponding folder for later use
+    task_ids.append((task_id, output_folder))
 
-    # Process the downloaded rasters
-    process_rasters(output_folder)
-    print("All ROIs Processed")
+print(f"All {len(task_ids)} tasks submitted!")
+
+# Phase 2: Check task statuses periodically (every 30 seconds)
+completed_tasks = []
+
+while len(completed_tasks) < len(task_ids):
+    print("Checking task statuses...")
+    for task_id, output_folder in task_ids:
+        if task_id in completed_tasks:
+            continue
+         
+        # loop when unprocessed task, doesnt want
+        
+        # Check task status
+        status = check_task_status(task_id, headers)
+        
+        if status == True:  # Replace "done" with the actual status string for completion
+            print(f"Downloading results for Task ID: {task_id}...")
+            
+            # Download the results for the current ROI
+            download_results(task_id, output_folder, headers)
+            
+            # Process the downloaded rasters
+            process_rasters(output_folder)
+            print(f"Rasters processed for Task ID: {task_id}")
+            
+            completed_tasks.append(task_id)
+    
+    if len(completed_tasks) < len(task_ids):
+        print(f"{len(completed_tasks)}/{len(task_ids)} tasks completed. Waiting for 30 seconds...")
+        time.sleep(30)  # Wait for 30 seconds before checking statuses again
+
+print("All tasks completed, results downloaded, and rasters processed.")
+
 
 
 """
