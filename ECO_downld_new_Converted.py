@@ -34,12 +34,13 @@ def get_token(user, password):
         response = requests.post('https://appeears.earthdatacloud.nasa.gov/api/login', auth=(user, password))
         response.raise_for_status()
         token_response = response.json()
-        return token_response
+        return token_response['token']
     except requests.exceptions.HTTPError as err:
         raise SystemExit(f"Authentication failed: {err}")
 
 token = get_token(user, password)
-# token_new = "eyJ0eXAiOiJKV1QiLCJvcmlnaW4iOiJFYXJ0aGRhdGEgTG9naW4iLCJzaWciOiJlZGxqd3RwdWJrZXlfb3BzIiwiYWxnIjoiUlMyNTYifQ.eyJ0eXBlIjoiVXNlciIsInVpZCI6ImplcGh0aGF0IiwiZXhwIjoxNzM0MDAyNTMyLCJpYXQiOjE3Mjg4MTg1MzIsImlzcyI6Imh0dHBzOi8vdXJzLmVhcnRoZGF0YS5uYXNhLmdvdiJ9.sly-XS_g6K44wo0JKJ4quriQzVdfPOJsRSavYhww7z7OFttzSdUHeMwDBmezZhLnrk6YiNiSAWtogqRyU8zJSwamMo2ACfTxyoeRZ9EQ_5qtfOptDVUZqww26f95Rrsz58ygLG5tmRlZbUSmXXgLk9fyshuftduyMi6L34LcJrX10HkthgRKUWwVz8NTkoPboHAxGDPQlcKfKeAdN40Q7GWe4sOMeDdYA1AaF0ZeQAxG4aAr0z-7a3rtNwdQa5MvoPIsXMpqaIxM8BLZm82Yu8Wt79PH9Rvt14GnJGZ8LKMpYU8AWxKTmKg7liAw5R6THnOpwsFJxWc2fo5h6eBLNg"
+print(token)
+# token = "eyJ0eXAiOiJKV1QiLCJvcmlnaW4iOiJFYXJ0aGRhdGEgTG9naW4iLCJzaWciOiJlZGxqd3RwdWJrZXlfb3BzIiwiYWxnIjoiUlMyNTYifQ.eyJ0eXBlIjoiVXNlciIsInVpZCI6ImplcGh0aGF0IiwiZXhwIjoxNzM0MDAyNTMyLCJpYXQiOjE3Mjg4MTg1MzIsImlzcyI6Imh0dHBzOi8vdXJzLmVhcnRoZGF0YS5uYXNhLmdvdiJ9.sly-XS_g6K44wo0JKJ4quriQzVdfPOJsRSavYhww7z7OFttzSdUHeMwDBmezZhLnrk6YiNiSAWtogqRyU8zJSwamMo2ACfTxyoeRZ9EQ_5qtfOptDVUZqww26f95Rrsz58ygLG5tmRlZbUSmXXgLk9fyshuftduyMi6L34LcJrX10HkthgRKUWwVz8NTkoPboHAxGDPQlcKfKeAdN40Q7GWe4sOMeDdYA1AaF0ZeQAxG4aAr0z-7a3rtNwdQa5MvoPIsXMpqaIxM8BLZm82Yu8Wt79PH9Rvt14GnJGZ8LKMpYU8AWxKTmKg7liAw5R6THnOpwsFJxWc2fo5h6eBLNg"
 
 # Get Today Date As End Date
 print("Setting Dates")
@@ -55,8 +56,8 @@ sd = yesterday_date_str
 # Products, Headers and layers
 product = "ECO_L2T_LSTE.002"
 headers = {
-    "Authorization": f"Bearer {token['token']}",
-    "Content-Type": "application/json"
+    # "Authorization": f"Bearer {format(token['token'])}"
+    'Authorization': 'Bearer {0}'.format(token)
 }
 layers = ["LST", "LST_err"]
 
@@ -125,12 +126,14 @@ def check_task_status(task_id, headers):
 # downloads are different. Get Bundle response, then get file_id, then refer to download link using file_id
 # idx loop switched, phase 1 - download requests, phase 2 - status checking.
 # more requests sent, faster response, and some tasks may complete before phase 2 begins.
-# in phase 2, implement - task 1/130, instead of just IDs + taskIDs being repeated in another line
+# in loop phase 2, implement - task 1/130, instead of just IDs + taskIDs being repeated in another line
+# fixed loops, but downloaded files read user denied access
+
 
 # Function to download results from AppEEARS
 def download_results(task_id, output_path, headers):
     url = f"https://appeears.earthdatacloud.nasa.gov/api/bundle/{task_id}"
-    response = requests.get(url, headers=headers)
+    response = requests.get(url, headers=headers, allow_redirects=True, stream=True)
     files = response.json()['files']
     for file in files:
         file_id = file['file_id']
