@@ -125,7 +125,8 @@ def check_task_status(task_id, headers):
 # downloads are different. Get Bundle response, then get file_id, then refer to download link using file_id
 # idx loop switched, phase 1 - download requests, phase 2 - status checking.
 # more requests sent, faster response, and some tasks may complete before phase 2 begins.
-# in phase 2, implement - task 1/130, instead of just IDs + taskIDs being repeated in another line
+# in loop phase 2, implement - task 1/130, instead of just IDs + taskIDs being repeated in another line
+# fixed loops, but downloaded files read user denied access
 
 # Function to download results from AppEEARS
 def download_results(task_id, output_path, headers):
