@@ -25,11 +25,10 @@ except Exception as e:
 user = 'abdullahusmani1'
 password = 'haziqLOVERS123!'
 
-# Get token (API login via requests)
+# Get token (API login via r)
 def get_token(user, password):
 
     #Authenticates with Earthdata and retrieves an authentication token.
-
     try:
         response = requests.post('https://appeears.earthdatacloud.nasa.gov/api/login', auth=(user, password))
         response.raise_for_status()
@@ -40,7 +39,6 @@ def get_token(user, password):
 
 token = get_token(user, password)
 print(token)
-# token = "eyJ0eXAiOiJKV1QiLCJvcmlnaW4iOiJFYXJ0aGRhdGEgTG9naW4iLCJzaWciOiJlZGxqd3RwdWJrZXlfb3BzIiwiYWxnIjoiUlMyNTYifQ.eyJ0eXBlIjoiVXNlciIsInVpZCI6ImplcGh0aGF0IiwiZXhwIjoxNzM0MDAyNTMyLCJpYXQiOjE3Mjg4MTg1MzIsImlzcyI6Imh0dHBzOi8vdXJzLmVhcnRoZGF0YS5uYXNhLmdvdiJ9.sly-XS_g6K44wo0JKJ4quriQzVdfPOJsRSavYhww7z7OFttzSdUHeMwDBmezZhLnrk6YiNiSAWtogqRyU8zJSwamMo2ACfTxyoeRZ9EQ_5qtfOptDVUZqww26f95Rrsz58ygLG5tmRlZbUSmXXgLk9fyshuftduyMi6L34LcJrX10HkthgRKUWwVz8NTkoPboHAxGDPQlcKfKeAdN40Q7GWe4sOMeDdYA1AaF0ZeQAxG4aAr0z-7a3rtNwdQa5MvoPIsXMpqaIxM8BLZm82Yu8Wt79PH9Rvt14GnJGZ8LKMpYU8AWxKTmKg7liAw5R6THnOpwsFJxWc2fo5h6eBLNg"
 
 # Get Today Date As End Date
 print("Setting Dates")
@@ -56,8 +54,7 @@ sd = yesterday_date_str
 # Products, Headers and layers
 product = "ECO_L2T_LSTE.002"
 headers = {
-    # "Authorization": f"Bearer {format(token['token'])}"
-    'Authorization': 'Bearer {0}'.format(token)
+    'Authorization': f'Bearer {token}'
 }
 layers = ["LST", "LST_err"]
 
@@ -67,7 +64,7 @@ roi = gpd.read_file(roi_path)
 roi_json = roi.__geo_interface__  # Convert ROI to GeoJSON
 
 
-def build_task_request(product, layers, roi, sd, ed):
+def build_task_request(product, layers, roi_json, sd, ed):
     # Prepare the request payload
     task = {
         "task_type": "area",
@@ -75,7 +72,7 @@ def build_task_request(product, layers, roi, sd, ed):
         "params": {
             "dates": [{"startDate": sd, "endDate": ed}],
             "layers": [{"product": product, "layer": layer} for layer in layers],
-            "geo": roi_json,  # Using GeoJSON for the region
+            "geo": roi_json,  # Use the properly formatted roi
             "output": {
                 "format": {"type": "geotiff"},
                 "projection": "geographic"
@@ -116,38 +113,21 @@ def check_task_status(task_id, headers):
         else:
             raise Exception(f"Task failed with status: {status}")
     return doneFlag
-    
-# getting response that isnt application/json - unexpected output: html/text
-# wrong URL was put in check_task_status - response.json()["status"] didn't exist
-# no case for status == "queued"
-# no case for status == "processing", replaced "running" w/ "processing"
-# potential resubmission of requests
-# have simultaneous requests going
-# downloads are different. Get Bundle response, then get file_id, then refer to download link using file_id
-# idx loop switched, phase 1 - download requests, phase 2 - status checking.
-# more requests sent, faster response, and some tasks may complete before phase 2 begins.
-# in loop phase 2, implement - task 1/130, instead of just IDs + taskIDs being repeated in another line
-# fixed loops, but downloaded files read user denied access
-
 
 # Function to download results from AppEEARS
 def download_results(task_id, output_path, headers):
     url = f"https://appeears.earthdatacloud.nasa.gov/api/bundle/{task_id}"
-    response = requests.get(url, headers=headers, allow_redirects=True, stream=True)
+    response = requests.get(url, headers=headers)
     files = response.json()['files']
     for file in files:
         file_id = file['file_id']
         local_filename = os.path.join(output_path, file['file_name'])
         download_url = f"{url}/{file_id}"
-        with requests.get(download_url, stream=True) as r:
-            with open(local_filename, 'wb') as f:
-                for chunk in r.iter_content(chunk_size=8192):
-                    f.write(chunk)
+        download_response = requests.get(download_url, headers=headers, stream=True, allow_redirects="True")
+        with open(local_filename, 'wb') as f:
+            for chunk in download_response.iter_content(chunk_size=8192):
+                f.write(chunk)
         print(f"Downloaded {local_filename}")
-
-
-
-
 
 # Function to process the raster files
 def process_rasters(output_folder):
@@ -186,7 +166,7 @@ for idx, row in roi.iterrows():
     roi_geometry = gpd.GeoSeries([row.geometry], crs=roi.crs).__geo_interface__
 
     # Build and submit task for the current ROI
-    task_request = build_task_request(product, layers, roi_geometry, sd, ed)
+    task_request = build_task_request(product, layers, roi_json, sd, ed)
     task_id = submit_task(headers, task_request)
     print(f"Task ID: {task_id}")
     
@@ -264,9 +244,9 @@ def filter_data(bdf):
 
 # Save filtered data as GeoTIFF and CSV
 def save_filtered_data(bdf, output_path):
-    bdf.to_csv(output_path + '_filter.csv', index=False)
+    bdf.to_csv(output_path + '_filterequests.csv', index=False)
     # Rebuild raster from filtered data
-    with rasterio.open(output_path + '_filter.tif', 'w', **meta) as dest:
+    with rasterio.open(output_path + '_filterequests.tif', 'w', **meta) as dest:
         dest.write(bdf['LST_filter'].values.reshape(shape), 1)
 
 # Example usage
