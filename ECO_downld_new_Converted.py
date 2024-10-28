@@ -1,7 +1,7 @@
 import os
+import re
 import time
 import requests
-import json
 import geopandas as gpd
 import rasterio
 import numpy as np
@@ -44,12 +44,14 @@ print(token)
 print("Setting Dates")
 today_date = datetime.now()
 today_date_str = today_date.strftime("%m-%d-%Y")
-ed = today_date_str
+# ed = today_date_str
+ed = "10-16-2024"
 
 # Get Yesterday Date as Start Date
 yesterday_date = today_date - timedelta(days=1)
 yesterday_date_str = yesterday_date.strftime("%m-%d-%Y")
-sd = yesterday_date_str
+# sd = yesterday_date_str
+sd = "10-15-2024"
 
 # Products, Headers and layers
 product = "ECO_L2T_LSTE.002"
@@ -115,19 +117,52 @@ def check_task_status(task_id, headers):
     return doneFlag
 
 # Function to download results from AppEEARS
-def download_results(task_id, output_path, headers):
+def download_results(task_id, headers):
     url = f"https://appeears.earthdatacloud.nasa.gov/api/bundle/{task_id}"
     response = requests.get(url, headers=headers)
     files = response.json()['files']
+    
     for file in files:
         file_id = file['file_id']
-        local_filename = os.path.join(output_path, file['file_name'])
-        download_url = f"{url}/{file_id}"
-        download_response = requests.get(download_url, headers=headers, stream=True, allow_redirects="True")
-        with open(local_filename, 'wb') as f:
-            for chunk in download_response.iter_content(chunk_size=8192):
-                f.write(chunk)
-        print(f"Downloaded {local_filename}")
+        file_name = file['file_name']
+        aid_match = re.search(r'aid(\d{4})', file_name)  # Extract aid number from filename
+        
+        # Check if the file has an aid number
+        if aid_match:
+            aid_number = aid_match.group(0)  # Get the full aid number string (e.g., "aid0001")
+            output_folder = aid_folder_mapping.get(aid_number)  # Get corresponding output folder
+            
+            if output_folder is not None:
+                # Remove any preceding folder in the file_name before the last '/' (for TIFF files)
+                file_name_stripped = file_name.split('/')[-1]  # Strip off any preceding folder path
+                local_filename = os.path.join(output_folder, file_name_stripped)
+                print(f"Downloading to: {local_filename}")  # Print path for debugging
+                
+                download_url = f"{url}/{file_id}"
+                download_response = requests.get(download_url, headers=headers, stream=True, allow_redirects=True)
+                os.makedirs(output_folder, exist_ok=True)  # Ensure the output folder exists
+                
+                with open(local_filename, 'wb') as f:
+                    for chunk in download_response.iter_content(chunk_size=8192):
+                        f.write(chunk)
+                print(f"Downloaded {local_filename}")
+                
+                # Process the downloaded rasters for this aid_folder
+                process_rasters(output_folder)  # Process files in the respective output folder
+                print(f"Rasters processed for aid number: {aid_number}")
+
+        else:
+            # Handle files without an aid number (e.g., xml, csv, json)
+            local_filename = os.path.join(pt, file_name)  # Save directly to the pt defined folder
+            print(f"Downloading to base folder: {local_filename}")  # Print path for debugging
+            
+            download_url = f"{url}/{file_id}"
+            download_response = requests.get(download_url, headers=headers, stream=True, allow_redirects=True)
+            
+            with open(local_filename, 'wb') as f:
+                for chunk in download_response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+            print(f"Downloaded {local_filename}")
 
 # Function to process the raster files
 def process_rasters(output_folder):
@@ -154,60 +189,47 @@ def process_rasters(output_folder):
                 dst.write(lst_filtered, 1)
                 print(f"Filtered raster saved: {filtered_file}")
 
-# Phase 1: Submit all tasks first
-task_ids = []  # List to hold task_ids and corresponding output folders
+# Submit task in one go
+task_request = build_task_request(product, layers, roi_json, sd, ed)
+task_id = submit_task(headers, task_request)
+print(f"Task ID: {task_id}")
 
+# Phase 1: Create Directories and Mapping
+aid_folder_mapping = {}  # Initialize mapping outside the loop
 for idx, row in roi.iterrows():
-    # Create bounding box for ROI
-    roi_bbox = row.geometry.bounds
-    roi2 = gpd.GeoSeries([row.geometry], crs=roi.crs)
     print(f"Processing ROI {idx + 1}/{len(roi)}")
-
-    roi_geometry = gpd.GeoSeries([row.geometry], crs=roi.crs).__geo_interface__
-
-    # Build and submit task for the current ROI
-    task_request = build_task_request(product, layers, roi_json, sd, ed)
-    task_id = submit_task(headers, task_request)
-    print(f"Task ID: {task_id}")
     
     # Construct directory path for saving data
     output_folder = os.path.join(pt, row['name'], row['location'])
     os.makedirs(output_folder, exist_ok=True)
     print(f"Output folder created: {output_folder}")
     
-    # Store the task_id and its corresponding folder for later use
-    task_ids.append((task_id, output_folder))
+    # Map aid numbers to output folders
+    aid_number = f'aid{str(idx + 1).zfill(4)}'  # Construct aid number
+    aid_folder_mapping[aid_number] = output_folder
 
-print(f"All {len(task_ids)} tasks submitted!")
+
+print("All tasks submitted!")
 
 # Phase 2: Check task statuses periodically (every 30 seconds)
 completed_tasks = []
 
-while len(completed_tasks) < len(task_ids):
+while len(completed_tasks) < 1:  # Change to 1 since we only have one task
     print("Checking task statuses...")
-    for task_id, output_folder in task_ids:
-        if task_id in completed_tasks:
-            continue
-         
-        # loop when unprocessed task, doesnt want
-        
-        # Check task status
-        status = check_task_status(task_id, headers)
-        
-        if status == True:  # Replace "done" with the actual status string for completion
-            print(f"Downloading results for Task ID: {task_id}...")
-            
-            # Download the results for the current ROI
-            download_results(task_id, output_folder, headers)
-            
-            # Process the downloaded rasters
-            process_rasters(output_folder)
-            print(f"Rasters processed for Task ID: {task_id}")
-            
-            completed_tasks.append(task_id)
     
-    if len(completed_tasks) < len(task_ids):
-        print(f"{len(completed_tasks)}/{len(task_ids)} tasks completed. Waiting for 30 seconds...")
+    # Check the status of the single task
+    status = check_task_status(task_id, headers)
+    
+    if status:  # Replace True with the actual status string for completion
+        print(f"Downloading results for Task ID: {task_id}...")
+        download_results(task_id, headers)  # Pass the roi DataFrame for dynamic mapping
+        # Process the downloaded rasters
+        process_rasters(pt)  # Assuming you want to process all data in the base output directory
+        print(f"Rasters processed for Task ID: {task_id}")
+        completed_tasks.append(task_id)
+    
+    if len(completed_tasks) < 1:
+        print("Task not completed yet. Waiting for 30 seconds...")
         time.sleep(30)  # Wait for 30 seconds before checking statuses again
 
 print("All tasks completed, results downloaded, and rasters processed.")

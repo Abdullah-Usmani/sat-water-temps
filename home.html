@@ -118,6 +118,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+
 </head>
 <body>
 
@@ -156,48 +157,10 @@
             document.getElementById('currentDayDisplay').innerText = `Current Day: ${currentDayString}`;
         </script>
 
-        <!-- Location Selection -->
-        <div class="location-container">
-            <h3>Select Location:</h3>
-            <select id="locationSelect">
-                <option value="Baleh Dam">Baleh Dam</option>
-                <option value="Murum Dam">Murum Dam</option>
-                <option value="Bakun Dam">Bakun Dam</option>
-                <option value="Baram Dam">Baram Dam</option>
-                <option value="Sg. Tembeling">Sg. Tembeling</option>
-                <option value="Sg. Selangau">Sg. Selangau</option>
-                <option value="Sg. Koyan">Sg. Koyan</option>
-                <option value="Sg. Rejang">Sg. Rejang</option>
-            </select>
-        </div>
-
-        <!-- Chart Section -->
-        <div class="chart-container">
-            <!-- Line Chart for Water Temperature -->
-            <div class="chart">
-                <h3>Water Temperature (Last 30 Days)</h3>
-                <canvas id="tempChart" width="400" height="200"></canvas>
-            </div>
-
-            <!-- Round Chart for Temperature Prediction -->
-            <div class="round-chart">
-                <h3>Temperature Predictions</h3>
-                <canvas id="predictionChart" width="400" height="200"></canvas>
-            </div>
-        </div>
-
-        <!-- Slider Section -->
-        <div class="slider-container">
-            <h3>Historical Temperature Data</h3>
-            <p>Select a day to view water temperature:</p>
-            <input type="range" min="0" max="30" value="15" class="slider" id="dateSlider">
-            <p>Selected Day: <span id="sliderValue">15</span> Days Ago</p>
-        </div>
-
         <!-- Map Section for Dam Locations -->
         <div class="map-container">
             <h3>Dam Locations</h3>
-            <div id="map"></div>
+            <div id="map" style="height: 500px; width: 100%;"></div>
         </div>
     </section>
 
@@ -208,128 +171,166 @@
 
     <!-- Script for Chart.js (Interactive with Slider and Location Select) -->
     <script>
-        // Generate random temperature data for 30 days for 8 locations in Sarawak
-        const temperatureData = {};
-        const damData = {};
-        const numDays = 30;
-        const locations = [
-            'Baleh Dam', 'Murum Dam', 'Bakun Dam', 'Baram Dam',
-            'Sg. Tembeling', 'Sg. Selangau', 'Sg. Koyan', 'Sg. Rejang'
-        ];
-
-        locations.forEach(location => {
-            temperatureData[location] = [];
-            damData[location] = {};
-            for (let i = 0; i <= numDays; i++) {
-                temperatureData[location].push(
-                    Array(7).fill(0).map(() => Math.floor(Math.random() * (30 - 20 + 1)) + 20) // Random temperatures between 20°C and 30°C
-                );
-                damData[location][i] = Math.floor(Math.random() * (30 - 20 + 1)) + 20;
-            }
-        });
-
-        // Initialize chart with Baleh Dam 15 days ago data
-        const ctx = document.getElementById('tempChart').getContext('2d');
-        let currentLocation = 'Baleh Dam';
-        let tempChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: ['Day 1', 'Day 5', 'Day 10', 'Day 15', 'Day 20', 'Day 25', 'Day 30'],
-                datasets: [{
-                    label: `Water Temperature (°C) - ${currentLocation}`,
-                    data: temperatureData[currentLocation][15],
-                    backgroundColor: 'rgba(0, 123, 255, 0.2)',
-                    borderColor: 'rgba(0, 123, 255, 1)',
-                    borderWidth: 2,
-                    fill: true,
-                }]
-            },
-            options: {
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
-                }
-            }
-        });
-
-        // Update chart, map, and predictions based on slider and location changes
-        const slider = document.getElementById('dateSlider');
-        const sliderValue = document.getElementById('sliderValue');
-        const locationSelect = document.getElementById('locationSelect');
-
-        slider.oninput = function() {
-            sliderValue.innerText = this.value;
-            updateCharts(this.value);
-        };
-
-        locationSelect.onchange = function() {
-            currentLocation = this.value;
-            updateCharts(slider.value);
-        };
-
-        function updateCharts(daysAgo) {
-            tempChart.data.datasets[0].data = temperatureData[currentLocation][daysAgo];
-            tempChart.data.datasets[0].label = `Water Temperature (°C) - ${currentLocation}`;
-            tempChart.update();
-
-            // Update prediction chart
-            const predictionCtx = document.getElementById('predictionChart').getContext('2d');
-            new Chart(predictionCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Predicted Temp: 28°C', 'Other Predictions'],
-                    datasets: [{
-                        label: 'Temperature Predictions',
-                        data: [28, 12],
-                        backgroundColor: ['rgba(75, 192, 192, 0.2)', 'rgba(255, 99, 132, 0.2)'],
-                        borderColor: ['rgba(75, 192, 192, 1)', 'rgba(255, 99, 132, 1)'],
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                        },
-                        title: {
-                            display: true,
-                            text: `Temperature Predictions - ${currentLocation}`
-                        }
-                    }
-                }
-            });
-        }
-
-        // Leaflet map for dam locations
+        // Initialize the map and set its view to a geographical location and zoom level
         const map = L.map('map').setView([2.5, 112.5], 6); // Centered over Sarawak
 
-        // Add a tile layer
+        // Add a tile layer (background map)
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
         }).addTo(map);
 
-        // Dam locations with coordinates
-        const damLocations = {
-            'Baleh Dam': [2.298, 112.522],
-            'Murum Dam': [2.304, 113.063],
-            'Bakun Dam': [2.281, 113.045],
-            'Baram Dam': [3.494, 114.087],
-            'Sg. Tembeling': [3.097, 102.318],
-            'Sg. Selangau': [2.747, 112.933],
-            'Sg. Koyan': [2.517, 113.038],
-            'Sg. Rejang': [2.103, 112.945]
-        };
+        // Load GeoJSON data
+        fetch("polygons2.geojson")
+            .then(response => response.json())
+            .then(data => {
+                // Add GeoJSON layer to the map
+                L.geoJSON(data, {
+                    onEachFeature: function (feature, layer) {
+                        // Optionally bind a popup with more information
+                        layer.bindPopup(`Location: ${feature.properties.name}`);
+                    }
+                }).addTo(map);
+            });
 
-        // Create markers for each dam location
-        for (const [name, coords] of Object.entries(damLocations)) {
-            const marker = L.marker(coords).addTo(map);
-            marker.bindTooltip(name, { direction: 'top' });
-        }
 
-        // Update initial chart display
-        updateCharts(15);
+                    // Styling options
+        L.geoJSON(data, {
+            style: function (feature) {
+                return { color: "#ff7800", weight: 2 };
+            },
+            onEachFeature: function (feature, layer) {
+                layer.on({
+                    mouseover: function () { layer.setStyle({ color: "#00ff00" }); },
+                    mouseout: function () { layer.setStyle({ color: "#ff7800" }); },
+                    click: function () {
+                        alert("Polygon clicked!");
+                        // Any additional action on click
+                    }
+                });
+            }
+        }).addTo(map);
+        // // Generate random temperature data for 30 days for 8 locations in Sarawak
+        // const temperatureData = {};
+        // const damData = {};
+        // const numDays = 30;
+        // const locations = [
+        //     'Baleh Dam', 'Murum Dam', 'Bakun Dam', 'Baram Dam',
+        //     'Sg. Tembeling', 'Sg. Selangau', 'Sg. Koyan', 'Sg. Rejang'
+        // ];
+
+        // locations.forEach(location => {
+        //     temperatureData[location] = [];
+        //     damData[location] = {};
+        //     for (let i = 0; i <= numDays; i++) {
+        //         temperatureData[location].push(
+        //             Array(7).fill(0).map(() => Math.floor(Math.random() * (30 - 20 + 1)) + 20) // Random temperatures between 20°C and 30°C
+        //         );
+        //         damData[location][i] = Math.floor(Math.random() * (30 - 20 + 1)) + 20;
+        //     }
+        // });
+
+        // // Initialize chart with Baleh Dam 15 days ago data
+        // const ctx = document.getElementById('tempChart').getContext('2d');
+        // let currentLocation = 'Baleh Dam';
+        // let tempChart = new Chart(ctx, {
+        //     type: 'line',
+        //     data: {
+        //         labels: ['Day 1', 'Day 5', 'Day 10', 'Day 15', 'Day 20', 'Day 25', 'Day 30'],
+        //         datasets: [{
+        //             label: `Water Temperature (°C) - ${currentLocation}`,
+        //             data: temperatureData[currentLocation][15],
+        //             backgroundColor: 'rgba(0, 123, 255, 0.2)',
+        //             borderColor: 'rgba(0, 123, 255, 1)',
+        //             borderWidth: 2,
+        //             fill: true,
+        //         }]
+        //     },
+        //     options: {
+        //         scales: {
+        //             y: {
+        //                 beginAtZero: true
+        //             }
+        //         }
+        //     }
+        // });
+
+        // // Update chart, map, and predictions based on slider and location changes
+        // const slider = document.getElementById('dateSlider');
+        // const sliderValue = document.getElementById('sliderValue');
+        // const locationSelect = document.getElementById('locationSelect');
+
+        // slider.oninput = function() {
+        //     sliderValue.innerText = this.value;
+        //     updateCharts(this.value);
+        // };
+
+        // locationSelect.onchange = function() {
+        //     currentLocation = this.value;
+        //     updateCharts(slider.value);
+        // };
+
+        // function updateCharts(daysAgo) {
+        //     tempChart.data.datasets[0].data = temperatureData[currentLocation][daysAgo];
+        //     tempChart.data.datasets[0].label = `Water Temperature (°C) - ${currentLocation}`;
+        //     tempChart.update();
+
+        //     // Update prediction chart
+        //     const predictionCtx = document.getElementById('predictionChart').getContext('2d');
+        //     new Chart(predictionCtx, {
+        //         type: 'doughnut',
+        //         data: {
+        //             labels: ['Predicted Temp: 28°C', 'Other Predictions'],
+        //             datasets: [{
+        //                 label: 'Temperature Predictions',
+        //                 data: [28, 12],
+        //                 backgroundColor: ['rgba(75, 192, 192, 0.2)', 'rgba(255, 99, 132, 0.2)'],
+        //                 borderColor: ['rgba(75, 192, 192, 1)', 'rgba(255, 99, 132, 1)'],
+        //                 borderWidth: 1
+        //             }]
+        //         },
+        //         options: {
+        //             responsive: true,
+        //             plugins: {
+        //                 legend: {
+        //                     position: 'top',
+        //                 },
+        //                 title: {
+        //                     display: true,
+        //                     text: `Temperature Predictions - ${currentLocation}`
+        //                 }
+        //             }
+        //         }
+        //     });
+        // }
+
+        // // Leaflet map for dam locations
+        // const map = L.map('map').setView([2.5, 112.5], 6); // Centered over Sarawak
+
+        // // Add a tile layer
+        // L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        //     maxZoom: 19,
+        // }).addTo(map);
+
+        // // Dam locations with coordinates
+        // const damLocations = {
+        //     'Baleh Dam': [2.298, 112.522],
+        //     'Murum Dam': [2.304, 113.063],
+        //     'Bakun Dam': [2.281, 113.045],
+        //     'Baram Dam': [3.494, 114.087],
+        //     'Sg. Tembeling': [3.097, 102.318],
+        //     'Sg. Selangau': [2.747, 112.933],
+        //     'Sg. Koyan': [2.517, 113.038],
+        //     'Sg. Rejang': [2.103, 112.945]
+        // };
+
+        // // Create markers for each dam location
+        // for (const [name, coords] of Object.entries(damLocations)) {
+        //     const marker = L.marker(coords).addTo(map);
+        //     marker.bindTooltip(name, { direction: 'top' });
+        // }
+
+        // // Update initial chart display
+        // updateCharts(15);
     </script>
 </body>
 </html>
