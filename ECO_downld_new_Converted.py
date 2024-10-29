@@ -44,14 +44,14 @@ print(token)
 print("Setting Dates")
 today_date = datetime.now()
 today_date_str = today_date.strftime("%m-%d-%Y")
-# ed = today_date_str
-ed = "10-16-2024"
+ed = today_date_str
+# ed = "10-01-2024"
 
 # Get Yesterday Date as Start Date
 yesterday_date = today_date - timedelta(days=1)
 yesterday_date_str = yesterday_date.strftime("%m-%d-%Y")
 # sd = yesterday_date_str
-sd = "10-15-2024"
+sd = "10-01-2024"
 
 # Products, Headers and layers
 product = "ECO_L2T_LSTE.002"
@@ -122,39 +122,44 @@ def download_results(task_id, headers):
     response = requests.get(url, headers=headers)
     files = response.json()['files']
     
+    # Dictionary to group files by aid folder
+    aid_files = {}
+
+    # Step 1: Download files and group by aid
     for file in files:
         file_id = file['file_id']
         file_name = file['file_name']
         aid_match = re.search(r'aid(\d{4})', file_name)  # Extract aid number from filename
-        
-        # Check if the file has an aid number
+
         if aid_match:
             aid_number = aid_match.group(0)  # Get the full aid number string (e.g., "aid0001")
             output_folder = aid_folder_mapping.get(aid_number)  # Get corresponding output folder
             
             if output_folder is not None:
-                # Remove any preceding folder in the file_name before the last '/' (for TIFF files)
-                file_name_stripped = file_name.split('/')[-1]  # Strip off any preceding folder path
+                # Ensure output folder exists and strip preceding folder in file_name if present
+                os.makedirs(output_folder, exist_ok=True)
+                file_name_stripped = file_name.split('/')[-1]
                 local_filename = os.path.join(output_folder, file_name_stripped)
-                print(f"Downloading to: {local_filename}")  # Print path for debugging
                 
+                print(f"Downloading to: {local_filename}")
                 download_url = f"{url}/{file_id}"
                 download_response = requests.get(download_url, headers=headers, stream=True, allow_redirects=True)
-                os.makedirs(output_folder, exist_ok=True)  # Ensure the output folder exists
                 
+                # Save the file locally
                 with open(local_filename, 'wb') as f:
                     for chunk in download_response.iter_content(chunk_size=8192):
                         f.write(chunk)
+                
                 print(f"Downloaded {local_filename}")
                 
-                # Process the downloaded rasters for this aid_folder
-                process_rasters(output_folder)  # Process files in the respective output folder
-                print(f"Rasters processed for aid number: {aid_number}")
+                # Add the file to the aid_files dictionary for later processing
+                if aid_number not in aid_files:
+                    aid_files[aid_number] = output_folder  # Track the folder for each aid
 
         else:
-            # Handle files without an aid number (e.g., xml, csv, json)
-            local_filename = os.path.join(pt, file_name)  # Save directly to the pt defined folder
-            print(f"Downloading to base folder: {local_filename}")  # Print path for debugging
+            # Handle general files without aid numbers (e.g., XML, CSV, JSON)
+            local_filename = os.path.join(pt, file_name)  # Save directly to the base folder
+            print(f"Downloading to base folder: {local_filename}")
             
             download_url = f"{url}/{file_id}"
             download_response = requests.get(download_url, headers=headers, stream=True, allow_redirects=True)
@@ -163,6 +168,13 @@ def download_results(task_id, headers):
                 for chunk in download_response.iter_content(chunk_size=8192):
                     f.write(chunk)
             print(f"Downloaded {local_filename}")
+
+    # Step 2: Process each aid_folder once all files are downloaded
+    for aid_number, folder in aid_files.items():
+        print(f"Processing rasters in folder: {folder} for aid number: {aid_number}")
+        process_rasters(folder)
+        print(f"Rasters processed for aid number: {aid_number}")
+
 
 # Function to process the raster files
 def process_rasters(output_folder):
