@@ -1,7 +1,12 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, send_file, abort
 import os
+import re
+import glob
 
 app = Flask(__name__)
+
+# Define an absolute path to the external data directory
+root_folder = r"C:\Users\Abdullah Usmani\Documents\Uni\y2\2019 (SEGP)\\"
 
 @app.route('/')
 def index():
@@ -9,14 +14,32 @@ def index():
     return render_template('index.html')
 
 @app.route('/feature/<feature_id>')
-def feature_map(feature_id):
-    # Render a separate map for each feature using its ID
-    # Check if the temperature data file exists for the given feature_id
-    data_path = f'static/data/temperature_{feature_id}.geojson'
-    if not os.path.exists(data_path):
-        return f"No temperature data found for feature ID: {feature_id}", 404
+def feature_page(feature_id):
+    # Directory containing .tif files for the feature
+    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECOraw', feature_id, 'lake')
     
-    return render_template('feature_map.html', feature_id=feature_id)
+    if not os.path.isdir(data_folder):
+        abort(404)
     
+    # Fetch .tif file names in the directory
+    tif_files = [f for f in os.listdir(data_folder) if f.endswith('.tif')]
+    
+    return render_template('feature_map.html', feature_id=feature_id, tif_files=tif_files)
+
+
+@app.route('/tif/<feature_id>/<filename>')
+def serve_tif(feature_id, filename):
+    # Serve the specified .tif file for the given feature_id
+    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECOraw', feature_id, 'lake')
+    file_path = os.path.join(data_folder, filename)
+    
+    print(f"Serving file from path: {file_path}")  # Debugging output
+
+    if os.path.exists(file_path):
+        return send_file(file_path, mimetype='image/tiff')
+    else:
+        print("File not found.")  # Debugging output
+        abort(404)
+
 if __name__ == "__main__":
     app.run(debug=True)

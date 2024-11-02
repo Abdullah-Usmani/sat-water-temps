@@ -9,5 +9,5 @@ geojson_data = gdf.to_json()
 
 # Save the GeoJSON data to a file
 # Saves to same directory as this python file
-with open('polygons.geojson', 'w') as f:
+with open('/static/polygons.geojson', 'w') as f:
     f.write(geojson_data)
