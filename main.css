@@ -1,0 +1,83 @@
+/* styles.css */
+
+body {
+    font-family: 'Arial', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #000;
+    color: white;
+}
+
+a {
+    text-decoration: none;
+    color: #00aaff;
+}
+
+header {
+    background-color: #0b3d91;
+    padding: 20px;
+    color: white;
+    text-align: center;
+    font-size: 26px;
+    font-weight: bold;
+}
+
+nav {
+    display: flex;
+    justify-content: center;
+    background-color: #1f4f96;
+    padding: 15px;
+}
+
+nav a {
+    margin: 0 20px;
+    color: #fff;
+    font-size: 18px;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+.hero {
+    background: url('satellite-view.jpg') no-repeat center center/cover;
+    height: 500px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    text-align: center;
+    font-size: 36px;
+    font-weight: bold;
+}
+
+section {
+    padding: 40px;
+    max-width: 1200px;
+    margin: auto;
+}
+
+.intro {
+    text-align: center;
+    padding: 30px;
+    background-color: #1a1a1a;
+    border-radius: 8px;
+}
+
+.map-container {
+    margin-top: 40px;
+    background-color: #1a1a1a;
+    padding: 20px;
+    border-radius: 8px;
+}
+
+.footer {
+    background-color: #0b3d91;
+    color: white;
+    padding: 20px;
+    text-align: center;
+    margin-top: 40px;
+}
+
+#map {
+    height: 500px;
+    width: 100%;
+}

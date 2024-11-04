@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dam Location Details</title>
+
+    <!-- Link to the main CSS stylesheet -->
+    <link rel="stylesheet" href="main.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+
+    <!-- Internal CSS for equal-sized boxes -->
+    <style>
+        .info-box {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+            padding: 10px;
+        }
+        .box {
+            border: 1px solid #ccc;
+            background-color: #000000;
+            padding: 10px;
+            text-align: center;
+            border-radius: 5px;
+            font-size: 14px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+
+    <header>Dam Location Details</header>
+    <div id="map" style="height: 500px; width: 100%; margin-bottom: 20px;"></div>
+    <div class="content">
+        <h2>Temperature Data for <span id="location-name"></span></h2>
+        <div class="info-box" id="temperature-boxes"></div>
+    </div>
+    <div class="footer">
+        © 2024 Water Temperature Monitoring Platform | All Rights Reserved
+    </div>
+
+    <script>
+        // Get the location name and coordinates from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const locationName = urlParams.get('location');
+        const coords = JSON.parse(decodeURIComponent(urlParams.get('coords')));
+
+        document.getElementById('location-name').innerText = locationName;
+
+        // Initialize the map
+        const map = L.map('map').setView([2.5, 112.5], 6);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+        }).addTo(map);
+
+        // Verify and add the polygon from the selected coordinates
+        if (Array.isArray(coords) && Array.isArray(coords[0])) {
+            const latLngs = coords[0].map(coord => [coord[1], coord[0]]); // Ensure correct Lat-Lng format
+            const polygon = L.polygon(latLngs, {
+                color: '#ff7800',
+                weight: 2,
+            }).addTo(map);
+
+            // Fit the map to the bounds of the polygon
+            map.fitBounds(polygon.getBounds());
+        } else {
+            console.error("Invalid coordinates format:", coords);
+            alert("Polygon data could not be displayed due to an invalid format.");
+        }
+
+        // Generate random temperature data and display it in equal-sized boxes
+        const tempContainer = document.getElementById('temperature-boxes');
+        for (let day = 1; day <= 20; day++) {
+            const temperature = (Math.random() * 15 + 10).toFixed(1);  // Random temp between 10°C and 25°C
+            const box = document.createElement('div');
+            box.classList.add('box');
+            box.innerHTML = `<strong>Day ${day}</strong><br>Temp: ${temperature}°C`;
+            tempContainer.appendChild(box);
+        }
+    </script>
+</body>
+</html>
