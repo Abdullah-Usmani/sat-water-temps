@@ -1,18 +1,25 @@
 import os
-import re
 import time
 import requests
 import geopandas as gpd
 import rasterio
+import json
+from rasterio.merge import merge
 import numpy as np
+import pandas as pd
 from datetime import datetime, timedelta
 
 # Directory paths
 print("Setting Directory Paths")
-pt = r"C:\Users\Abdullah Usmani\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/ECOraw/"
-output_path = r"C:\Users\Abdullah Usmani\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/ECO/"
-roi_path = r"C:\Users\Abdullah Usmani\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/polygon/test/site_full_ext_Test.shp"
+pt = "C:/Users/jepht/OneDrive/Desktop/Water Temp Sensors_Jephtha/ECOraw/"
+output_path = "C:/Users/jepht/OneDrive/Desktop/Water Temp Sensors_Jephtha/ECO/"
+roi_path = "C:/Users/jepht/OneDrive/Desktop/Water Temp Sensors_Jephtha/polygon/test/site_full_ext_Test.shp"
 
+# Define Earthdata login credentials (Replace with your actual credentials)
+user = 'JephthaT'
+password = '1#Big_Chilli'
+
+# Get token (API login via requests)
 if not os.path.exists(roi_path):
     raise FileNotFoundError(f"The ROI shapefile does not exist at {roi_path}")
 
@@ -20,10 +27,6 @@ try:
     roi = gpd.read_file(roi_path)
 except Exception as e:
     raise ValueError(f"Could not read the shapefile: {e}")
-
-# Define Earthdata login credentials (Replace with your actual credentials)
-user = 'abdullahusmani1'
-password = 'haziqLOVERS123!'
 
 # Get token (API login via r)
 def get_token(user, password):
@@ -246,7 +249,27 @@ while len(completed_tasks) < 1:  # Change to 1 since we only have one task
 
 print("All tasks completed, results downloaded, and rasters processed.")
 
+def cleanup_old_files(folder_path, days_old=20):
+    # Calculate the cutoff time
+    cutoff_time = datetime.now() - timedelta(days=days_old)
 
+    # Iterate through each file in the folder
+    for filename in os.listdir(folder_path):
+        file_path = os.path.join(folder_path, filename)
+
+        # Only proceed if it's a file
+        if os.path.isfile(file_path):
+            # Get the file's modification time
+            file_mod_time = datetime.fromtimestamp(os.path.getmtime(file_path))
+
+            # Delete file if it's older than the cutoff time
+            if file_mod_time < cutoff_time:
+                os.remove(file_path)
+                print(f"Deleted {filename} (last modified on {file_mod_time})")
+
+# Use this cleanup function after the main processing
+# For example, after processing all tasks and saving results
+cleanup_old_files(pt, days_old=20)
 
 """
 # Adjust and filter data
