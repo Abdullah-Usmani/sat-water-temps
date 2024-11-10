@@ -12,27 +12,69 @@
 
     <!-- Internal CSS for equal-sized boxes -->
     <style>
+        /* General Styles */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            color: #333;
+        }
+
+        header {
+            background-color: #0b3d91;
+            color: #fff;
+            padding: 20px;
+            text-align: center;
+            font-size: 26px;
+            font-weight: bold;
+        }
+
+        .content {
+            max-width: 1200px;
+            margin: auto;
+            padding: 20px;
+        }
+
+        /* Map Styles */
+        #map {
+            
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Info Box Styles */
         .info-box {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-            gap: 10px;
-            padding: 10px;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            background-color: #d3d3d3  ;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
+
         .box {
-            border: 1px solid #ccc;
-            background-color: #000000;
-            padding: 10px;
+            border: 1px solid #ddd;
+            background-color: #ffffff;
+            padding: 15px;
             text-align: center;
             border-radius: 5px;
             font-size: 14px;
+            color: #333;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .box:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
     </style>
 </head>
 <body>
 
     <header>Dam Location Details</header>
-    <div id="map" style="height: 500px; width: 100%; margin-bottom: 20px;"></div>
+    <div id="map" style="height: 400px; width: 70%; margin: 25px auto 20px;"></div>
     <div class="content">
         <h2>Temperature Data for <span id="location-name"></span></h2>
         <div class="info-box" id="temperature-boxes"></div>
