@@ -2,41 +2,66 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Feature Map - {{ feature_id }}</title>
+    <title>Feature Map</title>
     <style>
-        /* Style for displaying .tif files */
-        .tif-files {
-            margin: 20px;
-            background-color: #1a1a1a;
-            color: white;
-            padding: 15px;
-            border-radius: 8px;
+        /* Grid layout for images and descriptions */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); /* Wider min-width for better readability */
+            gap: 15px;
         }
-        .tif-files h3 {
-            margin-top: 0;
+        .grid-item {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        img {
+            width: 100%;
+            height: auto;
+            border-radius: 5px;
+            margin-bottom: 8px;
+        }
+        .caption {
+            font-weight: bold;
+            font-size: 0.9em;
+            color: #333;
+            margin-top: 5px;
+            white-space: nowrap; /* Keep text in one line */
+            overflow: hidden;
+            text-overflow: ellipsis; /* Show "..." for long text */
+            max-width: 100%;
+        }
+        .download-link {
+            font-size: 0.85em;
+            color: #0066cc;
+            text-decoration: none;
+            margin-top: 5px;
+        }
+        .download-link:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
 <body>
-
-    <header>Feature - {{ feature_id }}</header>
-    <div class="tif-files">
-        <h3>TIF Files for {{ feature_id }}</h3>
-        {% if tif_files %}
-            <ul>
-                {% for file in tif_files %}
-                    <li>
-                        <a href="{{ url_for('serve_tif', feature_id=feature_id, filename=file) }}" target="_blank">
-                            {{ file }}
-                        </a>
-                    </li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p>No .tif files available for this feature.</p>
-        {% endif %}
+    <h1>Feature: {{ feature_id }}</h1>
+    <div class="grid-container">
+        {% for filename in tif_files %}
+            <div class="grid-item">
+                <!-- Display the .png version of the .tif image -->
+                <img src="{{ url_for('serve_tif_as_png', feature_id=feature_id, filename=filename) }}" alt="{{ filename }}">
+                
+                <!-- Display the filename as a caption with ellipsis for overflow -->
+                <div class="caption" title="{{ filename }}">{{ filename }}</div>
+                
+                <!-- Provide a download link for the original .tif file -->
+                <a href="{{ url_for('download_tif', feature_id=feature_id, filename=filename) }}" class="download-link" download>Download Original</a>
+            </div>
+        {% endfor %}
     </div>
-
 </body>
 </html>

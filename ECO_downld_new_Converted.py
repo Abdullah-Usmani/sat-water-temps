@@ -9,8 +9,8 @@ from datetime import datetime, timedelta
 
 # Directory paths
 print("Setting Directory Paths")
-pt = r"C:\Users\Abdullah Usmani\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/ECOraw/"
-output_path = r"C:\Users\Abdullah Usmani\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/ECO/"
+raw_path = r"C:\Users\Abdullah Usmani\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/ECOraw/"
+filtered_path = r"C:\Users\Abdullah Usmani\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/ECO/"
 roi_path = r"C:\Users\Abdullah Usmani\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/polygon/test/site_full_ext_Test.shp"
 
 if not os.path.exists(roi_path):
@@ -122,8 +122,9 @@ def download_results(task_id, headers):
     response = requests.get(url, headers=headers)
     files = response.json()['files']
     
-    # Dictionary to group files by aid folder
+    # Dictionary to group files by aid folder and list to track newly downloaded files
     aid_files = {}
+    new_files = []  # List to keep track of just-downloaded files
 
     # Step 1: Download files and group by aid
     for file in files:
@@ -145,11 +146,11 @@ def download_results(task_id, headers):
                 download_url = f"{url}/{file_id}"
                 download_response = requests.get(download_url, headers=headers, stream=True, allow_redirects=True)
                 
-                # Save the file locally
+                # Save the file locally and add it to the new_files list
                 with open(local_filename, 'wb') as f:
                     for chunk in download_response.iter_content(chunk_size=8192):
                         f.write(chunk)
-                
+                new_files.append(local_filename)  # Track newly downloaded file
                 print(f"Downloaded {local_filename}")
                 
                 # Add the file to the aid_files dictionary for later processing
@@ -158,48 +159,71 @@ def download_results(task_id, headers):
 
         else:
             # Handle general files without aid numbers (e.g., XML, CSV, JSON)
-            local_filename = os.path.join(pt, file_name)  # Save directly to the base folder
+            local_filename = os.path.join(raw_path, file_name)  # Save directly to the base folder
             print(f"Downloading to base folder: {local_filename}")
             
             download_url = f"{url}/{file_id}"
             download_response = requests.get(download_url, headers=headers, stream=True, allow_redirects=True)
             
+
+            # CHANGE FILENAME HERE - ADD DATES FOR GENERAL FILES FOR UNIQUENESS
             with open(local_filename, 'wb') as f:
                 for chunk in download_response.iter_content(chunk_size=8192):
                     f.write(chunk)
+            new_files.append(local_filename)  # Track newly downloaded file
             print(f"Downloaded {local_filename}")
 
     # Step 2: Process each aid_folder once all files are downloaded
     for aid_number, folder in aid_files.items():
-        print(f"Processing rasters in folder: {folder} for aid number: {aid_number}")
-        process_rasters(folder)
+        print(f"Processing newly downloaded rasters in folder: {folder} for aid number: {aid_number}")
+        process_rasters(new_files)  # Pass only newly downloaded files to process
         print(f"Rasters processed for aid number: {aid_number}")
 
 
-# Function to process the raster files
-def process_rasters(output_folder):
-    raster_files = [os.path.join(output_folder, f) for f in os.listdir(output_folder) if f.endswith('.tif')]
+# Updated process_rasters function to handle only newly downloaded files
 
-    for tif_file in raster_files:
-        with rasterio.open(tif_file) as src:
-            lst = src.read(1)  # Load LST layer
-            lst_filtered = np.where(lst == -9999, np.nan, lst)  # Replace nodata with NaN
+# create ECOfiltered path directories, download files there only
+# aid_folder_mapping originally refers to aidnumber to ECOraw folder location,
+# does not refer to tuple (name, location) mapping as GPT thinks, gotta fix that
 
-            # Save the filtered raster back
-            filtered_file = tif_file.replace(".tif", "_filtered.tif")
-            with rasterio.open(
-                filtered_file,
-                'w',
-                driver='GTiff',
-                height=lst_filtered.shape[0],
-                width=lst_filtered.shape[1],
-                count=1,
-                dtype='float32',
-                crs=src.crs,
-                transform=src.transform
-            ) as dst:
-                dst.write(lst_filtered, 1)
-                print(f"Filtered raster saved: {filtered_file}")
+def process_rasters(new_files, aid_folder_mapping):
+
+    for tif_file in new_files:
+        if tif_file.endswith('.tif'):
+            # Extract the aid number from the file path
+            aid_number = os.path.basename(tif_file).split('_')[3]  # Example: aid0001
+            name, location = aid_folder_mapping.get(aid_number, (None, None))
+            
+            if name is None or location is None:
+                print(f"No mapping found for aid: {aid_number}")
+                continue
+
+            # Define the destination directory structure in the ECO folder
+            dest_folder = os.path.join(filtered_path, name, location)
+            os.makedirs(dest_folder, exist_ok=True)
+
+            # Open the original TIFF file
+            with rasterio.open(tif_file) as src:
+                lst = src.read(1)  # Load LST layer
+                lst_filtered = np.where(lst == -9999, np.nan, lst)  # Replace NoData with NaN
+
+                # Define path for the filtered file
+                filtered_file = os.path.join(dest_folder, os.path.basename(tif_file).replace(".tif", "_filtered.tif"))
+
+                # Save the filtered data to the new path
+                with rasterio.open(
+                    filtered_file,
+                    'w',
+                    driver='GTiff',
+                    height=lst_filtered.shape[0],
+                    width=lst_filtered.shape[1],
+                    count=1,
+                    dtype='float32',
+                    crs=src.crs,
+                    transform=src.transform
+                ) as dst:
+                    dst.write(lst_filtered, 1)
+                    print(f"Filtered raster saved: {filtered_file}")
 
 # Submit task in one go
 task_request = build_task_request(product, layers, roi_json, sd, ed)
@@ -212,7 +236,7 @@ for idx, row in roi.iterrows():
     print(f"Processing ROI {idx + 1}/{len(roi)}")
     
     # Construct directory path for saving data
-    output_folder = os.path.join(pt, row['name'], row['location'])
+    output_folder = os.path.join(raw_path, row['name'], row['location'])
     os.makedirs(output_folder, exist_ok=True)
     print(f"Output folder created: {output_folder}")
     
@@ -222,30 +246,41 @@ for idx, row in roi.iterrows():
 
 
 print("All tasks submitted!")
+print("Checking task statuses...")
+# Check the status of the single task
+status = check_task_status(task_id, headers)
 
-# Phase 2: Check task statuses periodically (every 30 seconds)
-completed_tasks = []
+if status:  # Replace True with the actual status string for completion
+    print(f"Downloading results for Task ID: {task_id}...")
+    download_results(task_id, headers)  # Pass the roi DataFrame for dynamic mapping
 
-while len(completed_tasks) < 1:  # Change to 1 since we only have one task
-    print("Checking task statuses...")
-    
-    # Check the status of the single task
-    status = check_task_status(task_id, headers)
-    
-    if status:  # Replace True with the actual status string for completion
-        print(f"Downloading results for Task ID: {task_id}...")
-        download_results(task_id, headers)  # Pass the roi DataFrame for dynamic mapping
-        # Process the downloaded rasters
-        process_rasters(pt)  # Assuming you want to process all data in the base output directory
-        print(f"Rasters processed for Task ID: {task_id}")
-        completed_tasks.append(task_id)
-    
-    if len(completed_tasks) < 1:
-        print("Task not completed yet. Waiting for 30 seconds...")
-        time.sleep(30)  # Wait for 30 seconds before checking statuses again
 
 print("All tasks completed, results downloaded, and rasters processed.")
 
+
+def cleanup_old_files(folder_path, days_old=20):
+
+    # Calculate the cutoff time
+    cutoff_time = datetime.now() - timedelta(days=days_old)
+
+    # Iterate through each file in the folder
+    for filename in os.listdir(folder_path):
+        file_path = os.path.join(folder_path, filename)
+
+        # Only proceed if it's a file
+        if os.path.isfile(file_path):
+
+            # Get the file's modification time
+            file_mod_time = datetime.fromtimestamp(os.path.getmtime(file_path))
+
+            # Delete file if it's older than the cutoff time
+            if file_mod_time < cutoff_time:
+                os.remove(file_path)
+                print(f"Deleted {filename} (last modified on {file_mod_time})")
+
+# Use this cleanup function after the main processing
+# For example, after processing all tasks and saving results
+# cleanup_old_files(raw_path, days_old=20)
 
 
 """
@@ -277,10 +312,10 @@ def filter_data(bdf):
     return bdf
 
 # Save filtered data as GeoTIFF and CSV
-def save_filtered_data(bdf, output_path):
-    bdf.to_csv(output_path + '_filterequests.csv', index=False)
+def save_filtered_data(bdf, filtered_path):
+    bdf.to_csv(filtered_path + '_filterequests.csv', index=False)
     # Rebuild raster from filtered data
-    with rasterio.open(output_path + '_filterequests.tif', 'w', **meta) as dest:
+    with rasterio.open(filtered_path + '_filterequests.tif', 'w', **meta) as dest:
         dest.write(bdf['LST_filter'].values.reshape(shape), 1)
 
 # Example usage
@@ -292,5 +327,5 @@ bdf = pd.DataFrame({
 })
 
 filtered_bdf = filter_data(bdf)
-save_filtered_data(filtered_bdf, "output_path")
+save_filtered_data(filtered_bdf, "filtered_path")
 """
