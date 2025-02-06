@@ -4,10 +4,14 @@ import requests
 import geopandas as gpd
 import rasterio
 import json
+import re
 from rasterio.merge import merge
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
+from azure.storage.blob import BlobServiceClient
+import mysql.connector
+from mysql.connector import Error
 
 # Directory paths
 print("Setting Directory Paths")
@@ -15,11 +19,20 @@ pt = "C:/Users/jepht/OneDrive/Desktop/Water Temp Sensors_Jephtha/ECOraw/"
 output_path = "C:/Users/jepht/OneDrive/Desktop/Water Temp Sensors_Jephtha/ECO/"
 roi_path = "C:/Users/jepht/OneDrive/Desktop/Water Temp Sensors_Jephtha/polygon/test/site_full_ext_Test.shp"
 
+# Database Credentials
+MYSQL_HOST = "localhost"
+MYSQL_USER = "Jephtha_T"
+MYSQL_PASSWORD = "1#Big_Chilli"
+MYSQL_DATABASE = "ecodata"
+
+# Azure Blob Storage credentials
+CONNECTION_STRING = "DefaultEndpointsProtocol=https;AccountName=ecodatasat;AccountKey=y4YZhr/kS10qLPGhXff3rrcydXD960w5yrxPsaWdGlcZkOACDm+YJyS79YCCkwFTdAWu/PrdC4y7+AStXFsUrA==;EndpointSuffix=core.windows.net"  # From Azure Portal
+CONTAINER_NAME = "ecostress-data"  # Name of your container
+
 # Define Earthdata login credentials (Replace with your actual credentials)
 user = 'JephthaT'
 password = '1#Big_Chilli'
 
-# Get token (API login via requests)
 if not os.path.exists(roi_path):
     raise FileNotFoundError(f"The ROI shapefile does not exist at {roi_path}")
 
@@ -27,6 +40,20 @@ try:
     roi = gpd.read_file(roi_path)
 except Exception as e:
     raise ValueError(f"Could not read the shapefile: {e}")
+
+# Function to Create Database Connection
+def create_db_connection():
+    try:
+        connection = mysql.connector.connect(
+            host=MYSQL_HOST,
+            user=MYSQL_USER,
+            password=MYSQL_PASSWORD,
+            database=MYSQL_DATABASE
+        )
+        return connection
+    except Error as e:
+        print(f"Error connecting to MySQL: {e}")
+        return None
 
 # Get token (API login via r)
 def get_token(user, password):
@@ -54,7 +81,7 @@ ed = today_date_str
 yesterday_date = today_date - timedelta(days=1)
 yesterday_date_str = yesterday_date.strftime("%m-%d-%Y")
 # sd = yesterday_date_str
-sd = "10-01-2024"
+sd = "11-01-2024"
 
 # Products, Headers and layers
 product = "ECO_L2T_LSTE.002"
@@ -137,40 +164,65 @@ def download_results(task_id, headers):
         if aid_match:
             aid_number = aid_match.group(0)  # Get the full aid number string (e.g., "aid0001")
             output_folder = aid_folder_mapping.get(aid_number)  # Get corresponding output folder
-            
+
             if output_folder is not None:
                 # Ensure output folder exists and strip preceding folder in file_name if present
                 os.makedirs(output_folder, exist_ok=True)
                 file_name_stripped = file_name.split('/')[-1]
                 local_filename = os.path.join(output_folder, file_name_stripped)
-                
+
                 print(f"Downloading to: {local_filename}")
                 download_url = f"{url}/{file_id}"
                 download_response = requests.get(download_url, headers=headers, stream=True, allow_redirects=True)
-                
-                # Save the file locally
+
+                # Save the file locally temporarily
                 with open(local_filename, 'wb') as f:
                     for chunk in download_response.iter_content(chunk_size=8192):
                         f.write(chunk)
-                
+
                 print(f"Downloaded {local_filename}")
-                
+
+                processed_file = process_rasters(local_filename)
+
+                # Upload the file to Azure Blob Storage
+                blob_name = f"{aid_number}/{os.path.basename(processed_file)}"  # Use aid_number as folder in Azure
+                file_url = upload_to_azure_blob(processed_file, blob_name)
+
+                # Insert file metadata into MySQL
+                region_id = int(aid_number.replace("aid", ""))  # Extract region_id from aid_number
+                file_type = "GeoTIFF" if processed_file.endswith(".tif") else "CSV"  # Adjust based on file type
+                insert_file(task_id, region_id, os.path.basename(processed_file), file_url, file_type)
+
                 # Add the file to the aid_files dictionary for later processing
                 if aid_number not in aid_files:
                     aid_files[aid_number] = output_folder  # Track the folder for each aid
+
 
         else:
             # Handle general files without aid numbers (e.g., XML, CSV, JSON)
             local_filename = os.path.join(pt, file_name)  # Save directly to the base folder
             print(f"Downloading to base folder: {local_filename}")
-            
+
             download_url = f"{url}/{file_id}"
             download_response = requests.get(download_url, headers=headers, stream=True, allow_redirects=True)
-            
+
             with open(local_filename, 'wb') as f:
                 for chunk in download_response.iter_content(chunk_size=8192):
                     f.write(chunk)
             print(f"Downloaded {local_filename}")
+            # Upload the file to Azure Blob Storage
+            blob_name = f"{aid_number}/{file_name}"  # Use aid_number as folder in Azure
+            file_url = upload_to_azure_blob(local_filename, blob_name)
+
+            # Insert file metadata into MySQL
+            region_id = int(aid_number.replace("aid", ""))  # Extract region_id from aid_number
+            if file_name.endswith(".csv"):
+                file_type = "CSV"
+            elif file_name.endswith(".xml"):
+                file_type = "XML"
+            elif file_name.endswith(".json"):
+                file_type = "JSON"
+            insert_file(task_id, region_id, file_name, file_url, file_type)
 
     # Step 2: Process each aid_folder once all files are downloaded
     for aid_number, folder in aid_files.items():
@@ -202,7 +254,67 @@ def process_rasters(output_folder):
                 transform=src.transform
             ) as dst:
                 dst.write(lst_filtered, 1)
-                print(f"Filtered raster saved: {filtered_file}")
+
+            print(f"Filtered raster saved: {filtered_file}")
+            return filtered_file
+
+# Function to Insert Task into MySQL
+def insert_task(task_id, task_name, start_date, end_date):
+    connection = create_db_connection()
+    if connection:
+        cursor = connection.cursor()
+        query = """
+        INSERT INTO tasks (task_id, task_name, start_date, end_date, status, submission_time)
+        VALUES (%s, %s, %s, %s, 'queued', NOW())
+        ON DUPLICATE KEY UPDATE status='queued', submission_time=NOW();
+        """
+        cursor.execute(query, (task_id, task_name, start_date, end_date))
+        connection.commit()
+        cursor.close()
+        connection.close()
+        print("Task inserted into MySQL")
+
+# Function to Insert Downloaded File Info into MySQL
+def insert_file(task_id, region_id, file_name, file_path, file_type):
+    connection = create_db_connection()
+    if connection:
+        cursor = connection.cursor()
+        query = """
+        INSERT INTO files (task_id, region_id, file_name, file_path, file_type, download_time)
+        VALUES (%s, %s, %s, %s, %s, NOW());
+        """
+        cursor.execute(query, (task_id, region_id, file_name, file_path, file_type))
+        connection.commit()
+        cursor.close()
+        connection.close()
+        print(f"File {file_name} inserted into MySQL")
+
+"""
+# Function to Insert Processed Raster Info into MySQL
+def insert_raster(file_id, raster_name, raster_path, raster_type, filtered_path):
+    connection = create_db_connection()
+    if connection:
+        cursor = connection.cursor()
+        query = "
+        INSERT INTO rasters (file_id, raster_name, raster_path, raster_type, filtered_path, processing_time)
+        VALUES (%s, %s, %s, %s, %s, NOW());
+        "
+        cursor.execute(query, (file_id, raster_name, raster_path, raster_type, filtered_path))
+        connection.commit()
+        cursor.close()
+        connection.close()
+        print(f"Raster {raster_name} inserted into MySQL")"""
+
+# Function to Upload to Azure Blob Storage
+def upload_to_azure_blob(file_path, blob_name):
+    blob_service_client = BlobServiceClient.from_connection_string(CONNECTION_STRING)
+    blob_client = blob_service_client.get_blob_client(container=CONTAINER_NAME, blob=blob_name)
+    
+    with open(file_path, "rb") as data:
+        blob_client.upload_blob(data, overwrite=True)
+    
+    print(f"File uploaded to Azure Blob: {blob_name}")
+    return blob_client.url
 
 # Submit task in one go
 task_request = build_task_request(product, layers, roi_json, sd, ed)
@@ -248,72 +360,3 @@ while len(completed_tasks) < 1:  # Change to 1 since we only have one task
         time.sleep(30)  # Wait for 30 seconds before checking statuses again
 
 print("All tasks completed, results downloaded, and rasters processed.")
-
-def cleanup_old_files(folder_path, days_old=20):
-    # Calculate the cutoff time
-    cutoff_time = datetime.now() - timedelta(days=days_old)
-
-    # Iterate through each file in the folder
-    for filename in os.listdir(folder_path):
-        file_path = os.path.join(folder_path, filename)
-
-        # Only proceed if it's a file
-        if os.path.isfile(file_path):
-            # Get the file's modification time
-            file_mod_time = datetime.fromtimestamp(os.path.getmtime(file_path))
-
-            # Delete file if it's older than the cutoff time
-            if file_mod_time < cutoff_time:
-                os.remove(file_path)
-                print(f"Deleted {filename} (last modified on {file_mod_time})")
-
-# Use this cleanup function after the main processing
-# For example, after processing all tasks and saving results
-cleanup_old_files(pt, days_old=20)
-
-"""
-# Adjust and filter data
-def filter_data(bdf):
-    # Quality control filter (QC)
-    qc_filter_values = [15, 2501, 3525, 65535]
-    bdf['LST_filter'] = np.where(bdf['QC'].isin(qc_filter_values), np.nan, bdf['LST'])
-    if 'LST_err_filter' not in bdf.columns:
-        print("Column 'LST_err_filter' does not exist in the DataFrame.")
-    else:
-        bdf['LST_err_filter'] = np.where(bdf['QC'].isin(qc_filter_values), np.nan, bdf['LST_err'])
-    if 'emis_filter' not in bdf.columns:
-        print("Column 'emis_filter' does not exist in the DataFrame.")
-    else:
-        bdf['emis_filter'] = np.where(bdf['QC'].isin(qc_filter_values), np.nan, bdf['emis'])
-    if 'heig_filter' not in bdf.columns:
-        print("Column 'heig_filter' does not exist in the DataFrame.")
-    else:
-        bdf['heig_filter'] = np.where(bdf['QC'].isin(qc_filter_values), np.nan, bdf['height'])
-
-    # Cloud filter
-    bdf['LST_filter'] = np.where(bdf['cloud'] == 1, np.nan, bdf['LST_filter'])
-    bdf['LST_err_filter'] = np.where(bdf['cloud'] == 1, np.nan, bdf['LST_err_filter'])
-
-    # Water filter
-    bdf['LST_filter'] = np.where(bdf['wt'] == 0, np.nan, bdf['LST_filter'])
-    print(bdf.columns)
-    return bdf
-
-# Save filtered data as GeoTIFF and CSV
-def save_filtered_data(bdf, output_path):
-    bdf.to_csv(output_path + '_filterequests.csv', index=False)
-    # Rebuild raster from filtered data
-    with rasterio.open(output_path + '_filterequests.tif', 'w', **meta) as dest:
-        dest.write(bdf['LST_filter'].values.reshape(shape), 1)
-
-# Example usage
-bdf = pd.DataFrame({
-    'LST': [1, 2, 3],
-    'QC': [15, 0, 3525],
-    'cloud': [0, 1, 0],
-    'wt': [1, 1, 0]
-})
-
-filtered_bdf = filter_data(bdf)
-save_filtered_data(filtered_bdf, "output_path")
-"""
