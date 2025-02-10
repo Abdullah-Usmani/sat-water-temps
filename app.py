@@ -6,7 +6,7 @@ import io
 app = Flask(__name__)
 
 # Define an absolute path to the external data directory
-root_folder = r"C:\Users\Abdullah Usmani\Documents\Uni\y2\2019 (SEGP)\\"
+root_folder = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\\"
 
 @app.route('/')
 def index():

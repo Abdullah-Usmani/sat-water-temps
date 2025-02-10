@@ -1,7 +1,7 @@
 import geopandas as gpd
 
 # Load the shapefile
-shapefile_path = r"C:\Users\Abdullah Usmani\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/polygon/site_full_ext.shp"
+shapefile_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/polygon/site_full_ext.shp"
 gdf = gpd.read_file(shapefile_path)
 
 # Convert to GeoJSON format
