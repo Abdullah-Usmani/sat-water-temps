@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Satellite Water Temperature Monitoring</title>
+
+    <!-- Link to external stylesheet -->
+    <link rel="stylesheet" href="main.css">
+
+    <!-- Load necessary libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+</head>
+<body>
+
+    <!-- Header and Navigation -->
+    <header>
+        Satellite-Based Water Temperature Monitoring
+    </header>
+
+    <nav>
+        <a href="index.html">Home</a>
+        <a href="images.html">Image Data</a>
+        <a href="data.html">Data</a>
+        <a href="about.html">About</a>
+        <a href="contact.html">Contact</a>
+    </nav>
+
+    <!-- Hero Section -->
+    <div class="hero">
+        Real-Time Global Water Temperature Analysis
+    </div>
+
+    <!-- Main Content Section -->
+    <section>
+        <div class="intro">
+            <h2>Explore Our Satellite Data</h2>
+            <p>Welcome to the cutting-edge platform where we analyze water temperature data from space. With real-time information from Ecostress and Sentinel 2 satellites, you can monitor water bodies across Southeast Asia.</p>
+            <p id="currentDayDisplay"></p>
+        </div>
+
+        <!-- JavaScript for displaying the current day -->
+        <script>
+            const currentDate = new Date();
+            const currentDayString = currentDate.toLocaleDateString('en-US', {
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+            });
+            document.getElementById('currentDayDisplay').innerText = `Current Day: ${currentDayString}`;
+        </script>
+
+        <!-- Map Section for Dam Locations -->
+        <div class="map-container">
+            <h3>Dam Locations</h3>
+            <div id="map" style="height: 500px; width: 100%;"></div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <div class="footer">
+        © 2024 Water Temperature Monitoring Platform | All Rights Reserved
+    </div>
+
+    <!-- JavaScript for map with clickable polygons -->
+    <script>
+        // Initialize the map and set its view to a geographical location and zoom level
+        const map = L.map('map').setView([2.5, 112.5], 6); // Centered over Sarawak
+
+        // Add a tile layer (background map)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+        }).addTo(map);
+
+        // Load GeoJSON data
+        fetch("polygons.geojson")
+            .then(response => response.json())
+            .then(data => {
+                // Add GeoJSON layer to the map with click event
+                L.geoJSON(data, {
+                    style: function (feature) {
+                        return { color: "#ff7800", weight: 2 };
+                    },
+                    onEachFeature: function (feature, layer) {
+                        layer.on({
+                            mouseover: function () { layer.setStyle({ color: "#00ff00" }); },
+                            mouseout: function () { layer.setStyle({ color: "#ff7800" }); },
+                            click: function () {
+                                // Open a new tab with location details and pass location name as a query parameter
+                                const targetUrl = `location-details.html?location=${feature.properties.name}&coords=${encodeURIComponent(JSON.stringify(feature.geometry.coordinates))}`;
+                                window.open(targetUrl, '_blank');
+                            }
+                        });
+                    }
+                }).addTo(map);
+            });
+    </script>
+</body>
+</html>
