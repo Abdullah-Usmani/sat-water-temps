@@ -53,7 +53,7 @@
         {% for filename in tif_files %}
             <div class="grid-item">
                 <!-- Display the .png version of the .tif image -->
-                <img src="{{ url_for('serve_tif_as_png', feature_id=feature_id, filename=filename) }}" alt="{{ filename }}">
+                <img src="{{ url_for('serve_tif_as_png', feature_id=feature_id, filename=filename) }}" alt="{{ feature_id }} for {{ filename }}">
                 
                 <!-- Display the filename as a caption with ellipsis for overflow -->
                 <div class="caption" title="{{ filename }}">{{ filename }}</div>

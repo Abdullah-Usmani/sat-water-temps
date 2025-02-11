@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 print("Setting Directory Paths")
 raw_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/ECOraw/"
 filtered_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/ECO/"
-roi_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/polygon/test/site_full_ext_Test.shp"
+roi_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/polygon/corrected/site_full_ext_corrected.shp"
 
 # Get token (API login via r)
 def get_token(user, password):
@@ -51,7 +51,7 @@ ed = today_date_str
 yesterday_date = today_date - timedelta(days=1)
 yesterday_date_str = yesterday_date.strftime("%m-%d-%Y")
 # sd = yesterday_date_str
-sd = "02-02-2025"
+sd = "02-05-2025"
 
 token = get_token(user, password)
 print(token)
@@ -223,10 +223,11 @@ def process_rasters(new_files):
                         print(f"Filtered raster saved: {filtered_file}")
 
 # Phase 1: Submit task in one go
-# task_request = build_task_request(product, layers, roi_json, sd, ed)
-# task_id = submit_task(headers, task_request)/
-# print(f"Task ID: {task_id}")
-task_id = "abbc9d8c-a439-44f6-8756-723cb54129e9"
+# task_id = "abbc9d8c-a439-44f6-8756-723cb54129e9"
+task_request = build_task_request(product, layers, roi_json, sd, ed)
+task_id = submit_task(headers, task_request)
+print(f"Task ID: {task_id}")
+
 # Phase 2: Create Directories and Mapping
 aid_folder_mapping = {}  # Initialize mapping outside the loop
 for idx, row in roi.iterrows():
