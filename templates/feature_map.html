@@ -7,7 +7,7 @@
         /* Grid layout for images and descriptions */
         .grid-container {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); /* Wider min-width for better readability */
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
             gap: 15px;
         }
         .grid-item {
@@ -31,9 +31,9 @@
             font-size: 0.9em;
             color: #333;
             margin-top: 5px;
-            white-space: nowrap; /* Keep text in one line */
+            white-space: nowrap;
             overflow: hidden;
-            text-overflow: ellipsis; /* Show "..." for long text */
+            text-overflow: ellipsis;
             max-width: 100%;
         }
         .download-link {
@@ -45,23 +45,60 @@
         .download-link:hover {
             text-decoration: underline;
         }
+        /* Layer selection controls */
+        .layer-controls {
+            margin-bottom: 15px;
+        }
     </style>
 </head>
 <body>
     <h1>Feature: {{ feature_id }}</h1>
-    <div class="grid-container">
+
+    <!-- Layer Selection Controls -->
+    <div class="layer-controls">
+        <label><input type="checkbox" id="LST" checked> LST</label>
+        <label><input type="checkbox" id="QC"> QC</label>
+        <label><input type="checkbox" id="cloud"> Cloud</label>
+        <label><input type="checkbox" id="LST_err"> LST_err</label>
+    </div>
+
+    <!-- Image Grid -->
+    <div class="grid-container" id="imageGrid">
         {% for filename in tif_files %}
-            <div class="grid-item">
-                <!-- Display the .png version of the .tif image -->
+            <div class="grid-item" data-layer="{{ filename | extract_layer }}">
                 <img src="{{ url_for('serve_tif_as_png', feature_id=feature_id, filename=filename) }}" alt="{{ feature_id }} for {{ filename }}">
-                
-                <!-- Display the filename as a caption with ellipsis for overflow -->
                 <div class="caption" title="{{ filename }}">{{ filename }}</div>
-                
-                <!-- Provide a download link for the original .tif file -->
                 <a href="{{ url_for('download_tif', feature_id=feature_id, filename=filename) }}" class="download-link" download>Download Original</a>
             </div>
         {% endfor %}
     </div>
+
+    <script>
+        function updateLayers() {
+            let selectedLayers = [];
+            document.querySelectorAll('.layer-controls input:checked').forEach(checkbox => {
+                selectedLayers.push(checkbox.id);
+            });
+
+            // Hide/show images based on selected layers
+            document.querySelectorAll('.grid-item').forEach(item => {
+                let layer = item.getAttribute('data-layer');
+                if (selectedLayers.includes(layer)) {
+                    item.style.display = "block";
+                } else {
+                    item.style.display = "none";
+                }
+            });
+        }
+
+        // Listen for checkbox changes
+        document.querySelectorAll('.layer-controls input').forEach(input => {
+            input.addEventListener('change', updateLayers);
+        });
+
+        // Initial filtering on page load
+        updateLayers();
+    </script>
+
 </body>
 </html>
