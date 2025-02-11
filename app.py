@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_file, render_template, abort
+from flask import Flask, json, request, jsonify, send_file, render_template, abort
 import os
 import io
 import re
@@ -26,8 +26,28 @@ def extract_layer(filename):
 # Register it as a Jinja filter
 app.jinja_env.filters['extract_layer'] = extract_layer
 
+
 @app.route('/feature/<feature_id>')
 def feature_page(feature_id):
+    geojson_path = os.path.join(root_folder, 'sat-water-temps', 'static', 'polygons.geojson')  # Adjust path as needed
+
+    # Load GeoJSON and find the lake feature
+    with open(geojson_path, 'r') as f:
+        geojson_data = json.load(f)
+
+    polygon_coords = None
+    for feature in geojson_data['features']:
+        if feature['properties']['name'] == feature_id and feature['properties']['location'] == 'lake':  
+            polygon_coords = feature['geometry']['coordinates']
+            break
+
+    if polygon_coords is None:
+        abort(404)  # Feature not found
+
+    return render_template('feature_page.html', feature_id=feature_id, coords=json.dumps(polygon_coords))
+
+@app.route('/feature/<feature_id>/archive')
+def feature_archive(feature_id):
     data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
     
     if not os.path.isdir(data_folder):
@@ -35,8 +55,7 @@ def feature_page(feature_id):
 
     tif_files = [f for f in os.listdir(data_folder) if f.endswith('.tif')]
     
-    return render_template('feature_map.html', feature_id=feature_id, tif_files=tif_files)
-
+    return render_template('feature_archive.html', feature_id=feature_id, tif_files=tif_files)
 
 # Function to convert .tif to .png for display
 def convert_tif_to_png(tif_path):
@@ -73,14 +92,6 @@ def convert_tif_to_png(tif_path):
                 max_val = np.nanmax(band)
 
                 print(f"Min: {min_val}, Max: {max_val}")  # Debugging output
-
-                # if np.isnan(min_val) or np.isnan(max_val):
-                #     # print("NaN values detected!")  # Debugging output
-                #     norm_band = np.zeros_like(band, dtype=np.uint8)  # Set to black
-                # elif max_val - min_val == 0:
-                #     # print("Constant image detected!")  # Debugging output
-                #     norm_band = np.zeros_like(band, dtype=np.uint8)  # Set to black
-                # else:
                 norm_band = ((band - min_val) / (max_val - min_val) * 255).astype(np.uint8)
 
                 norm_bands.append(norm_band)

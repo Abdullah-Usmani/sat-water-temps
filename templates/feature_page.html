@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dam Location Details</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            display: flex;
+            height: 100vh;
+            background-color: #121212;
+            color: #ffffff;
+            overflow: hidden;
+        }
+
+        /* MAP SECTION */
+        #map-container {
+            flex: 3;
+            position: relative;
+        }
+
+        #map {
+            width: 100%;
+            height: 100vh;
+            filter: brightness(90%);
+        }
+
+        /* SIDEBAR STYLING */
+        #sidebar {
+            flex: 0.2;
+            background: rgba(30, 30, 30, 0.9);
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            backdrop-filter: blur(10px);
+            box-shadow: -4px 0 10px rgba(0, 0, 0, 0.3);
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .info-box {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 100%;
+            max-width: 180px;
+        }
+
+        /* TEMPERATURE DATA CARDS */
+        .box {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            font-size: 14px;
+            width: 100%;
+            transition: transform 0.2s, background 0.3s;
+        }
+
+        .box:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-3px);
+        }
+
+        /* FOOTER */
+        .footer {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            color: #bbb;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="map-container">
+        <div id="map"></div>
+        <div class="footer">© 2025 Water Temperature Monitoring Platform | All Rights Reserved</div>
+    </div>
+
+    <div id="sidebar">
+        <h2>Temperature Data for <span id="location-name">{{ feature_id }}</span></h2>
+        <div class="info-box" id="temperature-boxes"></div>
+    </div>
+
+    <script>
+        // Set Feature ID in Sidebar
+        document.getElementById('location-name').innerText = "{{ feature_id }}";
+        console.log("Feature ID:", "{{ feature_id }}");
+
+        // Initialize Map
+        const map = L.map('map', {
+            center: [2.5, 112.5],
+            zoom: 10,
+            minZoom: 10,  // Prevent zooming out beyond level 6
+        });
+
+        const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri, Maxar, Earthstar Geographics, and the GIS User Community'
+        }).addTo(map);
+
+        // Parse and Display Polygon
+        const coords = JSON.parse('{{ coords|safe }}');
+        if (Array.isArray(coords) && Array.isArray(coords[0])) {
+            const latLngs = coords[0].map(coord => [coord[1], coord[0]]);
+            const polygon = L.polygon(latLngs, {
+                color: '#ff7800',
+                weight: 2,
+            }).addTo(map);
+            
+            // Adjust map bounds to fit polygon and lock maxBounds
+            map.fitBounds(polygon.getBounds());
+            map.setMaxBounds(polygon.getBounds());  // Prevents panning too far
+        } else {
+            console.error("Invalid coordinates format:", coords);
+        }
+
+
+        const tempContainer = document.getElementById('temperature-boxes');
+        for (let day = 1; day <= 20; day++) {
+            const temperature = (Math.random() * 15 + 10).toFixed(1);
+            const box = document.createElement('div');
+            box.classList.add('box');
+            box.innerHTML = `<strong>Day ${day}</strong><br>Temp: ${temperature}°C`;
+            tempContainer.appendChild(box);
+        }
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,6 @@
+pycache/
+static/
+test_data/
+index.html
+README.md
+sat-water-temps.code-workspace
