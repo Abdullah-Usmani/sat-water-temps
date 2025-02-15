@@ -44,7 +44,8 @@ def feature_page(feature_id):
     if polygon_coords is None:
         abort(404)  # Feature not found
 
-    return render_template('feature_page.html', feature_id=feature_id, coords=json.dumps(polygon_coords))
+    latest_tif = return_latest_tif(feature_id)
+    return render_template('feature_page.html', feature_id=feature_id, coords=json.dumps(polygon_coords), png_variable=latest_tif)
 
 @app.route('/feature/<feature_id>/archive')
 def feature_archive(feature_id):
@@ -118,6 +119,16 @@ def serve_tif_as_png(feature_id, filename):
 
     png_path = convert_tif_to_png(tif_path)
     return send_file(png_path, mimetype='image/png')
+
+def return_latest_tif(feature_id):
+    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
+    tif_files = [f for f in os.listdir(data_folder) if f.endswith('.tif')]
+    if not tif_files:
+        return None
+    serve_tif_as_png(feature_id, tif_files[-1])
+
+# Register it as a Jinja filter
+# app.jinja_env.filters['return_latest_tif'] = return_latest_tif
 
 @app.route('/download_tif/<feature_id>/<filename>')
 def download_tif(feature_id, filename):

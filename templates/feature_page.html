@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dam Location Details</title>
+    <title>{{ feature_id }} Details</title>
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
@@ -49,11 +49,17 @@
             box-shadow: -4px 0 10px rgba(0, 0, 0, 0.3);
         }
 
-        h2 {
+        h2, a {
             text-align: center;
             margin-bottom: 15px;
             font-size: 18px;
             font-weight: 600;
+        }
+
+        a {
+            color: #f9a44a;
+            text-decoration: none;
+            transition: color 0.3s;
         }
 
         .info-box {
@@ -101,6 +107,7 @@
 
     <div id="sidebar">
         <h2>Temperature Data for <span id="location-name">{{ feature_id }}</span></h2>
+        <div class="info-box" id="archive-box"><a href="/feature/{{ feature_id }}/archive">Archive</a></div>
         <div class="info-box" id="temperature-boxes"></div>
     </div>
 
@@ -108,6 +115,9 @@
         // Set Feature ID in Sidebar
         document.getElementById('location-name').innerText = "{{ feature_id }}";
         console.log("Feature ID:", "{{ feature_id }}");
+
+        // const polygon = null;
+        // const latLngs = null;
 
         // Initialize Map
         const map = L.map('map', {
@@ -125,17 +135,19 @@
         if (Array.isArray(coords) && Array.isArray(coords[0])) {
             const latLngs = coords[0].map(coord => [coord[1], coord[0]]);
             const polygon = L.polygon(latLngs, {
-                color: '#ff7800',
-                weight: 2,
+            color: '#ff7800',
+            weight: 2,
             }).addTo(map);
             
             // Adjust map bounds to fit polygon and lock maxBounds
             map.fitBounds(polygon.getBounds());
             map.setMaxBounds(polygon.getBounds());  // Prevents panning too far
+
+            // Latest PNG Raster Overlay
+            const overlay = L.imageOverlay("{{ png_variable }}", polygon.getBounds()).addTo(map);
         } else {
             console.error("Invalid coordinates format:", coords);
         }
-
 
         const tempContainer = document.getElementById('temperature-boxes');
         for (let day = 1; day <= 20; day++) {

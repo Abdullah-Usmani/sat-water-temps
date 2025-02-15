@@ -44,14 +44,14 @@ timestamp = datetime.now().strftime("%Y%m%d_%H%M")
 print("Setting Dates")
 today_date = datetime.now()
 today_date_str = today_date.strftime("%m-%d-%Y")
-ed = today_date_str
-# ed = "10-01-2024"
+# ed = today_date_str
+ed = "02-04-2025"
 
 # Get Yesterday Date as Start Date
 yesterday_date = today_date - timedelta(days=1)
 yesterday_date_str = yesterday_date.strftime("%m-%d-%Y")
 # sd = yesterday_date_str
-sd = "02-05-2025"
+sd = "02-01-2025"
 
 token = get_token(user, password)
 print(token)
