@@ -44,8 +44,8 @@ def feature_page(feature_id):
     if polygon_coords is None:
         abort(404)  # Feature not found
 
-    latest_tif = return_latest_tif(feature_id)
-    return render_template('feature_page.html', feature_id=feature_id, coords=json.dumps(polygon_coords), png_variable=latest_tif)
+    # latest_tif = convert_tif_to_png(get_latest_lst_tif(feature_id))
+    return render_template('feature_page.html', feature_id=feature_id, coords=json.dumps(polygon_coords))
 
 @app.route('/feature/<feature_id>/archive')
 def feature_archive(feature_id):
@@ -120,15 +120,28 @@ def serve_tif_as_png(feature_id, filename):
     png_path = convert_tif_to_png(tif_path)
     return send_file(png_path, mimetype='image/png')
 
-def return_latest_tif(feature_id):
-    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
-    tif_files = [f for f in os.listdir(data_folder) if f.endswith('.tif')]
-    if not tif_files:
-        return None
-    serve_tif_as_png(feature_id, tif_files[-1])
+@app.route('/latest_lst_tif/<feature_id>/')  # Add route for serving .png files
+def get_latest_lst_tif(feature_id):
+    """Finds and returns the latest 'LST' .tif file in the specified folder."""
 
-# Register it as a Jinja filter
-# app.jinja_env.filters['return_latest_tif'] = return_latest_tif
+    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
+
+    lst_files = []
+
+    # Iterate over files in the folder
+    for file in os.listdir(data_folder):
+        if extract_layer(file) == 'LST':
+            full_path = os.path.join(data_folder, file)
+            lst_files.append(full_path)
+
+    # Sort by modification time (newest first)
+    if lst_files:
+        lst_files.sort(key=os.path.getmtime, reverse=True)
+        png_path = convert_tif_to_png(lst_files[0])
+        return send_file(png_path, mimetype='image/png')
+    
+    return None  # Return None if no LST file is found
+
 
 @app.route('/download_tif/<feature_id>/<filename>')
 def download_tif(feature_id, filename):

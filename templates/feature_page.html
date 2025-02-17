@@ -144,7 +144,7 @@
             map.setMaxBounds(polygon.getBounds());  // Prevents panning too far
 
             // Latest PNG Raster Overlay
-            const overlay = L.imageOverlay("{{ png_variable }}", polygon.getBounds()).addTo(map);
+            const overlay = L.imageOverlay("{{ url_for('get_latest_lst_tif', feature_id=feature_id) }}", polygon.getBounds()).addTo(map);
         } else {
             console.error("Invalid coordinates format:", coords);
         }
