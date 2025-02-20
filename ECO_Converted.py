@@ -7,6 +7,7 @@ import geopandas as gpd
 import rasterio
 import numpy as np
 from datetime import datetime, timedelta
+from multiprocessing import Pool, cpu_count
 
 # Directory paths
 print("Setting Directory Paths")
@@ -52,7 +53,7 @@ ed = today_date_str
 yesterday_date = today_date - timedelta(days=1)
 yesterday_date_str = yesterday_date.strftime("%m-%d-%Y")
 # sd = yesterday_date_str
-sd = "02-14-2025"
+sd = "02-13-2025"
 
 token = get_token(user, password)
 print(token)
@@ -181,271 +182,156 @@ def download_results(task_id, headers):
 
 
 # Updated process_rasters function to handle only newly downloaded files, and apply filters according to Dr Matteo's R model
+# Invalid QC values
+INVALID_QC_VALUES = {15, 2501, 3525, 65535}
+
+# Function to extract aid number and date from filename
+def extract_metadata(filename):
+    aid_match = re.search(r'aid\d{4}', filename)
+    date_match = re.search(r'doy\d{7}', filename)
+
+    aid_number = aid_match.group(0) if aid_match else None
+    date = date_match.group(0) if date_match else None
+
+    return aid_number, date
+
+# Function to filter only new files and return unique dates
+def get_new_dates(new_files):
+    return {extract_metadata(f)[1] for f in new_files if extract_metadata(f)[1]}
+
+# Function to read a specific raster layer
+def read_raster(layer_name, relevant_files):
+    matches = [f for f in relevant_files if layer_name in f]
+    return rasterio.open(matches[0]) if matches else None
+
+# Function to read raster as NumPy array
+def read_array(raster):
+    return raster.read(1) if raster else None
+
+# Function to process a single date
+def process_date(date, new_files):
+    print(f"Processing date: {date}")
+
+    relevant_files = [f for f in new_files if date in f]
+    if not relevant_files:
+        print(f"No files found for date: {date}")
+        return
+
+    # Read raster layers
+    LST = read_raster("LST_doy", relevant_files)
+    LST_err = read_raster("LST_err", relevant_files)
+    QC = read_raster("QC", relevant_files)
+    wt = read_raster("water", relevant_files)
+    cl = read_raster("cloud", relevant_files)
+    EmisWB = read_raster("EmisWB", relevant_files)
+    heig = read_raster("height", relevant_files)
+
+    if None in [LST, LST_err, QC, wt, cl, EmisWB, heig]:
+        print(f"Skipping {date} due to missing layers.")
+        return
+
+    # Read raster data into NumPy arrays
+    arrays = {key: read_array(layer) for key, layer in {
+        "LST": LST, "LST_err": LST_err, "QC": QC, "wt": wt, "cloud": cl, "EmisWB": EmisWB, "height": heig
+    }.items()}
+
+    # Get AID number
+    aid_number = extract_metadata(relevant_files[0])[0]
+    name, location = aid_folder_mapping.get(aid_number, (None, None))
+    if not name or not location:
+        print(f"No mapping found for AID: {aid_number}, skipping...")
+        return
+    
+    # Define destination folder
+    dest_folder_raw = os.path.join(raw_path, name, location)
+    dest_folder_filtered = os.path.join(filtered_path, name, location)
+    os.makedirs(dest_folder_raw, exist_ok=True)
+    os.makedirs(dest_folder_filtered, exist_ok=True)
+
+    raw_tif_path = os.path.join(dest_folder_raw, f"{name}_{location}_{date}_raw.tif")
+    # Update metadata to match the number of bands
+    raw_meta = LST.meta.copy()
+    raw_meta.update(dtype=rasterio.float32, count=len(arrays))  # Ensure correct band count
+
+    # Open the new TIF file with multiple bands
+    with rasterio.open(raw_tif_path, "w", **raw_meta) as dst:
+        for idx, (key, data) in enumerate(arrays.items(), start=1):
+            dst.write(data, idx)  # Ensure it writes within the correct band range
+
+    print(f"Saved raw raster: {raw_tif_path}")
+
+    # Convert raster data to DataFrame
+    rows, cols = arrays["LST"].shape
+    x, y = np.meshgrid(np.arange(cols), np.arange(rows))
+
+    df = pd.DataFrame({
+        "x": x.flatten(),
+        "y": y.flatten(),
+        **{key: arr.flatten() for key, arr in arrays.items()}
+    })
+
+    # Save raw CSV
+    raw_csv_path = os.path.join(dest_folder_raw, f"{name}_{location}_{date}_raw.csv")
+    df.to_csv(raw_csv_path, index=False)
+    print(f"Saved raw CSV: {raw_csv_path}")
+
+    # Apply filtering
+    for col in ["LST", "LST_err", "QC", "EmisWB", "height"]:
+        df[f"{col}_filter"] = np.where(df["QC"].isin(INVALID_QC_VALUES), np.nan, df[col])
+
+    for col in ["LST_filter", "LST_err_filter", "QC_filter", "EmisWB_filter", "height_filter"]:
+        df[f"{col}"] = np.where(df["cloud"] == 1, np.nan, df[col])
+        # df[f"{col}"] = np.where(df["wt"] == 0, np.nan, df[col])
+
+    # Save filtered CSV
+    filter_csv_path = os.path.join(dest_folder_filtered, f"{name}_{location}_{date}_filter.csv")
+    df.to_csv(filter_csv_path, index=False)
+    print(f"Saved filtered CSV: {filter_csv_path}")
+
+    # Convert filtered data back to raster
+    def create_raster(data, reference_raster):
+        meta = reference_raster.meta.copy()
+        meta.update(dtype=rasterio.float32, count=1)
+        return data.reshape(rows, cols).astype(np.float32), meta
+
+    filtered_rasters = {
+        "LST": create_raster(df["LST_filter"].values, LST),
+        "LST_err": create_raster(df["LST_err_filter"].values, LST),
+        "QC": create_raster(df["QC_filter"].values, LST),
+        "EmisWB": create_raster(df["EmisWB_filter"].values, LST),
+        "height": create_raster(df["height_filter"].values, LST),
+    }
+
+    # Save filtered raster
+    filter_tif_path = os.path.join(dest_folder_filtered, f"{name}_{location}_{date}_filter.tif")
+    filter_meta = filtered_rasters["LST"][1].copy()
+    filter_meta.update(dtype=rasterio.float32, count=len(filtered_rasters))  # Correct band count
+
+    # Save filtered raster
+    with rasterio.open(filter_tif_path, "w", **filter_meta) as dst:
+        for idx, (key, (data, _)) in enumerate(filtered_rasters.items(), start=1):
+            dst.write(data, idx)  # Ensure correct band range
+    print(f"Saved filtered raster: {filter_tif_path}")
+
+    print(f"Finished processing {date}")
+
+# Main function to process all new files using multiprocessing
 def process_rasters(new_files):
-    for tif_file in new_files:
-        if tif_file.endswith('.tif'):
-            print(f"Processing file: {tif_file}")
-            # Extract the aid number from the file path
-            aid_match = re.search(r'aid\d{4}', tif_file)
-            if aid_match:
-                aid_number = aid_match.group(0)
-                print(f"Processing raster for aid number: {aid_number}")
-                name, location = aid_folder_mapping.get(aid_number, (None, None))
-            
-                if name is None or location is None:
-                    print(f"No mapping found for aid: {aid_number}")
-                    continue
+    new_dates = get_new_dates(new_files)
+    for date in new_dates:
+        print(f"{date} is a new date")
+    if not new_dates:
+        print("No new files to process.")
+        return
 
-                # Define the destination directory structure in the ECO folder
-                dest_folder_raw = os.path.join(raw_path, name, location)
-                dest_folder_filtered = os.path.join(filtered_path, name, location)
-                os.makedirs(dest_folder_filtered, exist_ok=True)
-                print(f"Destination folder created: {dest_folder_filtered}")
+    print(f"Processing {len(new_dates)} new dates...")
+    for date in new_dates:
+        process_date(date, new_files)
 
-                # NEWNEWNEWNEW
+    print("Processing complete.")
 
-                # Initialize raster variables as None to ensure they exist
-                LST = LST_err = QC = wt = cl = emis = heig = None
-
-                # Define a function to read raster or return NaN if not found
-                def read_raster_or_nan(tif_file, raster_name):
-                    if raster_name in tif_file:
-                        with rasterio.open(tif_file) as src:
-                            return src.read(1)  # Read the first band
-                    else:
-                        return None  # Return None if raster is not found
-
-                # Iterate through the tif files (assuming tif_files is a list of file paths)
-                if "LST_doy" in tif_file:
-                    LST = read_raster_or_nan(tif_file, "LST_doy")
-                if "LST_err" in tif_file:
-                    LST_err = read_raster_or_nan(tif_file, "LST_err")
-                if "QC" in tif_file:
-                    QC = read_raster_or_nan(tif_file, "QC")
-                if "water" in tif_file:
-                    wt = read_raster_or_nan(tif_file, "water")
-                if "cloud" in tif_file:
-                    cl = read_raster_or_nan(tif_file, "cloud")
-                if "Emis" in tif_file:
-                    emis = read_raster_or_nan(tif_file, "Emis")
-                if "height" in tif_file:
-                    heig = read_raster_or_nan(tif_file, "height")
-
-                # Ensure the data is read or replaced with NaN
-                # Get shape from the first raster (if any)
-                if LST is not None:
-                    raster_shape = LST.shape
-                else:
-                    raster_shape = (0, 0)  # Default shape if no rasters were read
-
-                # Replace None rasters with NaN arrays of the correct shape
-                LST_data = LST if LST is not None else np.full(raster_shape, np.nan)
-                LST_err_data = LST_err if LST_err is not None else np.full(raster_shape, np.nan)
-                QC_data = QC if QC is not None else np.full(raster_shape, np.nan)
-                wt_data = wt if wt is not None else np.full(raster_shape, np.nan)
-                cl_data = cl if cl is not None else np.full(raster_shape, np.nan)
-                emis_data = emis if emis is not None else np.full(raster_shape, np.nan)
-                heig_data = heig if heig is not None else np.full(raster_shape, np.nan)
-
-                # Now, ensure all rasters are the same shape
-                def ensure_same_shape(*rasters):
-                    # Get the max shape (height, width)
-                    max_shape = max([raster.shape for raster in rasters if raster is not None], key=lambda x: x)
-                    reshaped_rasters = []
-                    for raster in rasters:
-                        if raster is not None:
-                            # Resize if shape doesn't match the max shape
-                            if raster.shape != max_shape:
-                                raster_resized = np.full(max_shape, np.nan)  # Create a new array with the max shape
-                                raster_resized[:raster.shape[0], :raster.shape[1]] = raster  # Fill with original data
-                                reshaped_rasters.append(raster_resized)
-                            else:
-                                reshaped_rasters.append(raster)
-                        else:
-                            reshaped_rasters.append(np.full(max_shape, np.nan))  # If None, fill with NaN
-                    return reshaped_rasters
-
-                # Ensure all rasters are the same shape
-                rasters = ensure_same_shape(LST_data, LST_err_data, QC_data, wt_data, cl_data, emis_data, heig_data)
-
-                # Stack the rasters into a single array
-                raster_stack = np.stack(rasters, axis=-1)
-
-                # Save the stacked raster as a new file
-                with rasterio.open(os.path.join(dest_folder_raw, os.path.basename(tif_file).replace(".tif", "_raw.tif")), 'w',
-                                driver='GTiff', 
-                                count=raster_stack.shape[-1], 
-                                dtype=raster_stack.dtype, 
-                                width=raster_stack.shape[1], 
-                                height=raster_stack.shape[0], 
-                                crs=LST.crs if LST else None, 
-                                transform=LST.transform if LST else None) as dst:
-                    for i in range(raster_stack.shape[-1]):
-                        dst.write(raster_stack[:, :, i], i + 1)
-
-                # Convert raster to dataframe
-                data = []
-                for y in range(raster_shape[0]):
-                    for x in range(raster_shape[1]):
-                        data.append([x, y, LST_data[y, x], LST_err_data[y, x], QC_data[y, x], 
-                                    wt_data[y, x], cl_data[y, x], emis_data[y, x], heig_data[y, x]])
-
-                bdf = pd.DataFrame(data, columns=["x", "y", "LST", "LST_err", "QC", "wt", "cloud", "emis", "height"])
-
-                # Save to CSV
-                bdf.to_csv(os.path.join(dest_folder_raw, os.path.basename(tif_file).replace(".tif", "_raw.csv")))
-
-                # Filtering step
-                bdf['LST_filter'] = np.where(bdf['QC'].isin([15, 2501, 3525, 65535]), np.nan, bdf['LST'])
-                bdf['LST_err_filter'] = np.where(bdf['QC'].isin([15, 2501, 3525, 65535]), np.nan, bdf['LST_err'])
-                bdf['QC_filter'] = np.where(bdf['QC'].isin([15, 2501, 3525, 65535]), np.nan, bdf['QC'])
-                bdf['emis_filter'] = np.where(bdf['QC'].isin([15, 2501, 3525, 65535]), np.nan, bdf['emis'])
-                bdf['heig_filter'] = np.where(bdf['QC'].isin([15, 2501, 3525, 65535]), np.nan, bdf['height'])
-
-                # Cloud filtering
-                bdf['LST_filter'] = np.where(bdf['cloud'] == 1, np.nan, bdf['LST_filter'])
-                bdf['LST_err_filter'] = np.where(bdf['cloud'] == 1, np.nan, bdf['LST_err_filter'])
-                bdf['QC_filter'] = np.where(bdf['cloud'] == 1, np.nan, bdf['QC_filter'])
-                bdf['emis_filter'] = np.where(bdf['cloud'] == 1, np.nan, bdf['emis_filter'])
-                bdf['heig_filter'] = np.where(bdf['cloud'] == 1, np.nan, bdf['heig_filter'])
-
-                # Water filtering
-                bdf['LST_filter'] = np.where(bdf['wt'] == 0, np.nan, bdf['LST_filter'])
-                bdf['LST_err_filter'] = np.where(bdf['wt'] == 0, np.nan, bdf['LST_err_filter'])
-                bdf['QC_filter'] = np.where(bdf['wt'] == 0, np.nan, bdf['QC_filter'])
-                bdf['emis_filter'] = np.where(bdf['wt'] == 0, np.nan, bdf['emis_filter'])
-                bdf['heig_filter'] = np.where(bdf['wt'] == 0, np.nan, bdf['heig_filter'])
-
-                # Save filtered dataframe
-                bdf.to_csv(os.path.join(dest_folder_filtered, os.path.basename(tif_file).replace(".tif", "_filtered.csv")))
-
-                # Rebuild .tif files with filtered data
-                LST_filt = np.array(bdf['LST_filter'].values).reshape(raster_shape)
-                LST_err_filt = np.array(bdf['LST_err_filter'].values).reshape(raster_shape)
-                LST_QC_filt = np.array(bdf['QC_filter'].values).reshape(raster_shape)
-                LST_emis_filt = np.array(bdf['emis_filter'].values).reshape(raster_shape)
-                LST_heig_filt = np.array(bdf['heig_filter'].values).reshape(raster_shape)
-
-                # Create a new raster with filtered data
-                """
-                File "C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\sat-water-temps\ECO_Converted.py", line 330, in process_rasters
-                    with rasterio.open(os.path.join(dest_folder_filtered, os.path.basename(tif_file).replace(".tif", "_filtered.tif")), 'w',
-                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-                File "C:\Users\abdul\AppData\Local\Programs\Python\Python312\Lib\site-packages\rasterio\env.py", line 463, in wrapper
-                    return f(*args, **kwds)
-                        ^^^^^^^^^^^^^^^^
-                File "C:\Users\abdul\AppData\Local\Programs\Python\Python312\Lib\site-packages\rasterio\__init__.py", line 378, in open
-                    dataset = writer(
-                            ^^^^^^^
-                File "rasterio\\_io.pyx", line 1540, in rasterio._io.DatasetWriterBase.__init__
-                    rasterio.errors.RasterioIOError: Attempt to create 0x0 dataset is illegal,sizes must be larger than zero.
-                """
-                with rasterio.open(os.path.join(dest_folder_filtered, os.path.basename(tif_file).replace(".tif", "_filtered.tif")), 'w', 
-                                driver='GTiff', 
-                                count=5, 
-                                dtype=LST_data.dtype, 
-                                crs=LST.crs if LST else None, 
-                                transform=LST.transform if LST else None, 
-                                width=raster_shape[1], 
-                                height=raster_shape[0]) as out_raster:
-                    out_raster.write(LST_filt, 1)
-                    out_raster.write(LST_err_filt, 2)
-                    out_raster.write(LST_QC_filt, 3)
-                    out_raster.write(LST_emis_filt, 4)
-                    out_raster.write(LST_heig_filt, 5)
-
-                # NEWNEWNEWNEW
-
-                # # Open the original TIFF file
-                # with rasterio.open(tif_file) as src:
-                #     print(f"Opened TIFF file: {tif_file}")
-                #     # Extract metadata
-                #     meta = src.meta
-                #     bands = {}
-                #     if "LST" in tif_file:
-                #         bands["LST"] = src.read(1)
-                #         print(f"Shape of LST band: {bands["LST"]}")  # Should be (height, width)
-                #     elif "LST_err" in tif_file:
-                #         bands["LST_err"] = src.read(1)
-                #         print(f"Shape of LST_err band: {bands["LST_err"]}")  # Should be (height, width)
-                #     elif "QC" in tif_file:
-                #         bands["QC"] = src.read(1)
-                #         print(f"Shape of QC band: {bands["QC"]}")  # Should be (height, width)
-                #     elif "water" in tif_file:
-                #         bands["water"] = src.read(1)
-                #         print(f"Shape of water band: {bands["water"]}")  # Should be (height, width)
-                #     elif "cloud" in tif_file:
-                #         bands["cloud"] = src.read(1)
-                #         print(f"Shape of cloud band: {bands["cloud"]}")  # Should be (height, width)
-                #     elif "EmisWB" in tif_file:
-                #         bands["EmisWB"] = src.read(1)
-                #         print(f"Shape of EmisWB band: {bands["EmisWB"]}")  # Should be (height, width)
-                #     elif "height" in tif_file:
-                #         bands["height"] = src.read(1)
-                #         print(f"Shape of height band: {bands["height"]}")  # Should be (height, width)
-
-                #     # Convert raster to DataFrame
-                #     bdf = pd.DataFrame({
-                #         "x": np.repeat(np.arange(bands["LST"].shape[1]), bands["LST"].shape[0]),
-                #         "y": np.tile(np.arange(bands["LST"].shape[0]), bands["LST"].shape[1]),
-                #         **bands
-                #     })
-                #     print(f"Converted raster to DataFrame for file: {tif_file}")
-
-                #     # Apply filters
-                #     qc_mask = bdf["QC"].isin([15, 2501, 3525, 65535])
-                #     cloud_mask = bdf["cloud"] == 1
-                #     water_mask = bdf["water"] == 0
-
-                #     for key in ["LST", "LST_err", "QC", "EmisWB", "height"]:
-                #         bdf[f"{key}_filter"] = bdf[key]
-                #         bdf.loc[qc_mask | cloud_mask | water_mask, f"{key}_filter"] = np.nan
-                        
-                #     print(f"Applied filters for file: {tif_file}")
-
-                    # Save filtered CSV
-                    # csv_filename = os.path.join(dest_folder_filtered, os.path.basename(tif_file).replace(".tif", "_filtered.csv"))
-                    # os.makedirs(os.path.dirname(csv_filename), exist_ok=True)
-                    # bdf.to_csv(csv_filename, index=False)
-                    # print(f"Saved filtered CSV: {csv_filename}")
-                        
-                    # # Rebuild filtered raster
-                    # filtered_rasters = [bdf[f"{key}_filter"].values.reshape(meta['height'], meta['width']) for key in ["LST", "LST_err", "QC", "EmisWB", "height"]]
-                    # meta.update({"count": len(filtered_rasters)})
-                    # filtered_file = os.path.join(dest_folder_filtered, os.path.basename(tif_file).replace(".tif", "_filtered.tif"))
-                        
-                    # with rasterio.open(filtered_file, "w", **meta) as dst:
-                    #     for idx, layer in enumerate(filtered_rasters, start=1):
-                    #         dst.write(layer, idx)
-                    # print(f"Saved filtered raster: {filtered_file}")
-
-                    # final_tif = os.path.join(dest_folder_filtered, "multily_filt.tif")
-                    # with rasterio.open(final_tif, "w", **meta) as dst:
-                    #     for idx, layer in enumerate(filtered_rasters, start=1):
-                    #         dst.write(layer, idx)
-                    # print(f"Saved final multilayer GeoTIFF: {final_tif}")
-
-                    # lst = src.read(1)  # Load LST layer
-                    # lst_filtered = np.where(lst == -9999, np.nan, lst)  # Replace NoData with NaN
-
-                    # # Define path for the filtered file
-                    # filtered_file = os.path.join(dest_folder_filtered, os.path.basename(tif_file).replace(".tif", "_filtered.tif"))
-
-                    # # Save the filtered data to the new path
-                    # with rasterio.open(
-                    #     filtered_file,
-                    #     'w',
-                    #     driver='GTiff',
-                    #     height=lst_filtered.shape[0],
-                    #     width=lst_filtered.shape[1],
-                    #     count=1,
-                    #     dtype='float32',
-                    #     crs=src.crs,
-                    #     transform=src.transform
-                    # ) as dst:
-                    #     dst.write(lst_filtered, 1)
-                    #     print(f"Filtered raster saved: {filtered_file}")
-
+# Run the processing
+print("Processing complete.")
 
 # Phase 1: Submit task in one go
 # task_id = "abbc9d8c-a439-44f6-8756-723cb54129e9"
@@ -563,7 +449,7 @@ save_filtered_data(filtered_bdf, "filtered_path")
                     # Read relevant raster bands
                     for f in matching_files:
                         with rasterio.open(f) as src:
-                            if "LST_doy" in f:
+                            if "LST" in f:
                                 bands["LST"] = src.read(1)
                             elif "LST_err" in f:
                                 bands["LST_err"] = src.read(1)
