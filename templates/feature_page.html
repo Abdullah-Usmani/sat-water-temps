@@ -135,10 +135,10 @@
         if (Array.isArray(coords) && Array.isArray(coords[0])) {
             const latLngs = coords[0].map(coord => [coord[1], coord[0]]);
             const polygon = L.polygon(latLngs, {
-            color: '#ff7800',
+            color: '#8abbff',
+            opacity: 0.05,
             weight: 2,
             }).addTo(map);
-            
             // Adjust map bounds to fit polygon and lock maxBounds
             map.fitBounds(polygon.getBounds());
             map.setMaxBounds(polygon.getBounds());  // Prevents panning too far

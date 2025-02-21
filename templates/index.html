@@ -168,12 +168,12 @@
                 .then(data => {
                     L.geoJSON(data, {
                         style: function (feature) {
-                            return { color: "#ff7800", weight: 2 };
+                            return { color: "#8abbff", weight: 2 };
                         },
                         onEachFeature: function (feature, layer) {
                             layer.on({
                                 mouseover: function () { layer.setStyle({ color: "#00ff00" }); },
-                                mouseout: function () { layer.setStyle({ color: "#ff7800" }); },
+                                mouseout: function () { layer.setStyle({ color: "#8abbff" }); },
                                 click: function () {
                                 const featureId = feature.properties.name;
                                     if (featureId) {
