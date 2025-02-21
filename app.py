@@ -75,7 +75,7 @@ def convert_tif_to_png(tif_path):
             min_val = np.nanmin(band)  # Use np.nanmin to ignore NaN values
             max_val = np.nanmax(band)
 
-            print(f"Min: {min_val}, Max: {max_val}")  # Debugging output
+            # print(f"Min: {min_val}, Max: {max_val}")  # Debugging output
             norm_band = ((band - min_val) / (max_val - min_val) * 255).astype(np.uint8)
 
             norm_bands.append(norm_band)
@@ -152,7 +152,7 @@ def multi_tif_to_png(tif_path):
         img_bytes = io.BytesIO()
         img.save(img_bytes, format="PNG")
         img_bytes.seek(0)
-        
+
     return img_bytes
     
 @app.route('/serve_tif_as_png/<feature_id>/<filename>')

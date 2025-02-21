@@ -54,8 +54,8 @@ ed = today_date_str
 # Get Yesterday Date as Start Date
 yesterday_date = today_date - timedelta(days=1)
 yesterday_date_str = yesterday_date.strftime("%m-%d-%Y")
-# sd = yesterday_date_str
-sd = "02-19-2025"
+sd = yesterday_date_str
+# sd = "02-19-2025"
 
 # KEY RESULTS TO STORE/LOG
 updated_aids = set()
@@ -414,9 +414,9 @@ def cleanup_old_files(folder_path, days_old=20):
 
 
 # Phase 1: Submit task in one go
-# task_request = build_task_request(product, layers, roi_json, sd, ed)
-# task_id = submit_task(headers, task_request)
-task_id = "6c4bc1d7-a501-43fb-8f54-7ae09f1f573f"
+task_request = build_task_request(product, layers, roi_json, sd, ed)
+task_id = submit_task(headers, task_request)
+# task_id = "6c4bc1d7-a501-43fb-8f54-7ae09f1f573f"
 print(f"Task ID: {task_id}")
 
 # Phase 2: Create Directories and Mapping
@@ -444,3 +444,18 @@ print("All tasks completed, results downloaded!")
 
 # Phase 4: Process the downloaded files
 process_all(new_files)
+
+# Phase 5: Cleanup old files
+# cleanup_old_files(raw_path, days_old=20)
+
+# def delete_files_with_short_date(folder_path):
+#     for root, _, files in os.walk(folder_path):
+#         for file in files:
+#             date_match = re.search(r'\d{7}', file)
+#             if date_match and not re.search(r'\d{13}', file):
+#                 file_path = os.path.join(root, file)
+#                 os.remove(file_path)
+#                 print(f"Deleted {file_path}")
+
+# # Example usage
+# delete_files_with_short_date(filtered_path)
