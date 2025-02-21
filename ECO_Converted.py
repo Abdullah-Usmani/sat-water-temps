@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import time
@@ -14,6 +15,7 @@ print("Setting Directory Paths")
 raw_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/ECOraw/"
 filtered_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/ECO/"
 roi_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/polygon/corrected/site_full_ext_corrected.shp"
+log_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/logs/"
 
 # Get token (API login via r)
 def get_token(user, password):
@@ -53,10 +55,17 @@ ed = today_date_str
 yesterday_date = today_date - timedelta(days=1)
 yesterday_date_str = yesterday_date.strftime("%m-%d-%Y")
 # sd = yesterday_date_str
-sd = "02-13-2025"
+sd = "02-19-2025"
+
+# KEY RESULTS TO STORE/LOG
+updated_aids = set()
+new_files = []
+new_dates = []
+aid_folder_mapping = {}
+# Invalid QC values
+INVALID_QC_VALUES = {15, 2501, 3525, 65535}
 
 token = get_token(user, password)
-print(token)
 
 # Products, Headers and layers
 product = "ECO_L2T_LSTE.002"
@@ -128,7 +137,6 @@ def download_results(task_id, headers):
     url = f"https://appeears.earthdatacloud.nasa.gov/api/bundle/{task_id}"
     response = requests.get(url, headers=headers)
     files = response.json()['files']
-    new_files = []  # List to keep track of just-downloaded files
 
     # Step 1: Download files and group by aid
     for file in files:
@@ -138,6 +146,7 @@ def download_results(task_id, headers):
 
         if aid_match:
             aid_number = aid_match.group(0)  # Get the full aid number string (e.g., "aid0001")
+            updated_aids.add(extract_metadata(file_name)[0])  # Track updated aids
             name, location = aid_folder_mapping.get(aid_number, (None, None))
             output_folder = os.path.join(raw_path, name, location)
             
@@ -147,7 +156,7 @@ def download_results(task_id, headers):
                 file_name_stripped = file_name.split('/')[-1]
                 local_filename = os.path.join(output_folder, file_name_stripped)
 
-                print(f"Downloading to: {local_filename}")
+                # print(f"Downloading to: {local_filename}")
                 download_url = f"{url}/{file_id}"
                 download_response = requests.get(download_url, headers=headers, stream=True, allow_redirects=True)
                 
@@ -176,27 +185,59 @@ def download_results(task_id, headers):
             new_files.append(local_filename)  # Track newly downloaded file
             print(f"Downloaded {local_filename}")
 
-    # Step 2: Process each aid_folder once all files are downloaded
-    print("Processing rasters")
-    process_rasters(new_files)  # Pass only newly downloaded files to process
+        # Open the log file in append mode
+    file_path = f"updates_{timestamp}.txt"  # Each run creates a new file
+    os.path.join(log_path, file_path)
 
+    # Open the new file and save updates
+    with open(file_path, 'w', encoding='utf-8') as file:
+        file.write(f"Timestamp: {timestamp}\n\n")
 
-# Updated process_rasters function to handle only newly downloaded files, and apply filters according to Dr Matteo's R model
-# Invalid QC values
-INVALID_QC_VALUES = {15, 2501, 3525, 65535}
+        # Log task information
+        file.write("[Task Info]\n")
+        file.write(json.dumps(task_id, indent=4))  # Format JSON output
+        file.write(json.dumps(sd, indent=4))  # Format JSON output
+        file.write(json.dumps(ed, indent=4))  # Format JSON output
+        file.write("\n")
+
+        # Log list update
+        file.write("[Updated Aids]\n")
+        file.write(json.dumps(list(updated_aids), indent=4))  # Format JSON output
+        file.write("\n")
+        
+        # Log dictionary update
+        file.write("[New Files]\n")
+        file.write(json.dumps(new_files, indent=4))  # Format JSON output
+        file.write("\n\n")
+
+        # Log list update
+        file.write("[New Dates]\n")
+        # file.write(json.dumps(new_dates, indent=4))  # Format JSON output
+        file.write("\n")
+        
+        # Log dictionary update
+        file.write("[Aid Folder Mapping]\n")
+        file.write(json.dumps(aid_folder_mapping, indent=4))  # Format JSON output
+        file.write("\n\n")
+
+    print(f"Updates saved to {file_path}.")
 
 # Function to extract aid number and date from filename
 def extract_metadata(filename):
-    aid_match = re.search(r'aid\d{4}', filename)
-    date_match = re.search(r'doy\d{7}', filename)
+    aid_match = re.search(r'aid(\d{4})', filename)
+    date_match = re.search(r'doy(\d{13})', filename)
 
-    aid_number = aid_match.group(0) if aid_match else None
-    date = date_match.group(0) if date_match else None
+    aid_number = int(aid_match.group(1)) if aid_match else None
+    date = date_match.group(1) if date_match else None
 
     return aid_number, date
 
+# Function to filter only new folders and return unique folders
+def get_updated_folders(new_files):
+    return {extract_metadata(f)[0] for f in new_files if extract_metadata(f)[0]}
+
 # Function to filter only new files and return unique dates
-def get_new_dates(new_files):
+def get_updated_dates(new_files):
     return {extract_metadata(f)[1] for f in new_files if extract_metadata(f)[1]}
 
 # Function to read a specific raster layer
@@ -209,10 +250,15 @@ def read_array(raster):
     return raster.read(1) if raster else None
 
 # Function to process a single date
-def process_date(date, new_files):
-    print(f"Processing date: {date}")
-
-    relevant_files = [f for f in new_files if date in f]
+def process_rasters(aid_number, date, new_files):
+    print(f"Processing date: {date} for aid: {aid_number}")
+    relevant_files = []
+    # for f in new_files if aid_number and date in FILENAME, 
+    for f in new_files:
+        aid, f_date = extract_metadata(f)
+        if aid == aid_number and date == f_date:
+            relevant_files.append(f)
+    # relevant_files = [f for f in new_files if date in f]
     if not relevant_files:
         print(f"No files found for date: {date}")
         return
@@ -316,54 +362,36 @@ def process_date(date, new_files):
     print(f"Finished processing {date}")
 
 # Main function to process all new files using multiprocessing
-def process_rasters(new_files):
-    new_dates = get_new_dates(new_files)
-    for date in new_dates:
-        print(f"{date} is a new date")
-    if not new_dates:
-        print("No new files to process.")
+def process_all(all_new_files):
+    # updated_aids = get_updated_folders(all_new_files)
+    print(updated_aids)
+
+    if not updated_aids:
+        print("No new folders to process.")
         return
 
-    print(f"Processing {len(new_dates)} new dates...")
-    for date in new_dates:
-        process_date(date, new_files)
+    print(f"Processing {len(updated_aids)} updated folders...")
 
+    # Process each updated folder and date
+    for aid_number in updated_aids:
+        aid_folder_files = []
+        for file in all_new_files:
+            if aid_number == extract_metadata(file)[0]:
+                aid_folder_files.append(file)
+        new_dates_get = get_updated_dates(aid_folder_files)
+        if not new_dates_get:
+            print("No new files to process.")
+            continue
+        specific_date_files = []
+
+        for date in new_dates_get:
+            for file in aid_folder_files:
+                if date == extract_metadata(file)[1]:
+                    specific_date_files.append(file)
+            process_rasters(aid_number, date, specific_date_files)
     print("Processing complete.")
 
-# Run the processing
-print("Processing complete.")
-
-# Phase 1: Submit task in one go
-# task_id = "abbc9d8c-a439-44f6-8756-723cb54129e9"
-task_id = "fedc736e-523c-43c7-9d88-484d70e4156a"
-# task_request = build_task_request(product, layers, roi_json, sd, ed)
-# task_id = submit_task(headers, task_request)
-print(f"Task ID: {task_id}")
-
-# Phase 2: Create Directories and Mapping
-aid_folder_mapping = {}  # Initialize mapping outside the loop
-for idx, row in roi.iterrows():
-    print(f"Processing ROI {idx + 1}/{len(roi)}")
-    
-    # Construct directory path for saving data
-    output_folder = os.path.join(raw_path, row['name'], row['location'])
-    os.makedirs(output_folder, exist_ok=True)
-    print(f"Output folder created: {output_folder}")
-    
-    # Map aid numbers to output folders
-    aid_number = f'aid{str(idx + 1).zfill(4)}'  # Construct aid number
-    aid_folder_mapping[aid_number] = (row['name'], row['location'])  # Map aid number to folder
-
-# Phase 3: Check the status of the single task
-print("All tasks submitted!")
-print("Checking task statuses...")
-status = check_task_status(task_id, headers)
-if status:
-    print(f"Downloading results for Task ID: {task_id}...")
-    download_results(task_id, headers)  # Pass the roi DataFrame for dynamic mapping    
-print("All tasks completed, results downloaded, and rasters processed.")
-
-# Phase 4: Use this cleanup function after the main processing - cleanup_old_files(raw_path, days_old=20)
+# Phase 5: Use this cleanup function after the main processing - cleanup_old_files(raw_path, days_old=20)
 def cleanup_old_files(folder_path, days_old=20):
 
     # Calculate the cutoff time
@@ -385,119 +413,34 @@ def cleanup_old_files(folder_path, days_old=20):
                 print(f"Deleted {filename} (last modified on {file_mod_time})")
 
 
-"""
-# Adjust and filter data
-def filter_data(bdf):
-    # Quality control filter (QC)
-    qc_filter_values = [15, 2501, 3525, 65535]
-    bdf['LST_filter'] = np.where(bdf['QC'].isin(qc_filter_values), np.nan, bdf['LST'])
-    if 'LST_err_filter' not in bdf.columns:
-        print("Column 'LST_err_filter' does not exist in the DataFrame.")
-    else:
-        bdf['LST_err_filter'] = np.where(bdf['QC'].isin(qc_filter_values), np.nan, bdf['LST_err'])
-    if 'EmisWB_filter' not in bdf.columns:
-        print("Column 'EmisWB_filter' does not exist in the DataFrame.")
-    else:
-        bdf['EmisWB_filter'] = np.where(bdf['QC'].isin(qc_filter_values), np.nan, bdf['EmisWB'])
-    if 'heig_filter' not in bdf.columns:
-        print("Column 'heig_filter' does not exist in the DataFrame.")
-    else:
-        bdf['heig_filter'] = np.where(bdf['QC'].isin(qc_filter_values), np.nan, bdf['height'])
+# Phase 1: Submit task in one go
+# task_request = build_task_request(product, layers, roi_json, sd, ed)
+# task_id = submit_task(headers, task_request)
+task_id = "6c4bc1d7-a501-43fb-8f54-7ae09f1f573f"
+print(f"Task ID: {task_id}")
 
-    # Cloud filter
-    bdf['LST_filter'] = np.where(bdf['cloud'] == 1, np.nan, bdf['LST_filter'])
-    bdf['LST_err_filter'] = np.where(bdf['cloud'] == 1, np.nan, bdf['LST_err_filter'])
+# Phase 2: Create Directories and Mapping
+# aid_folder_mapping = {}  # Initialize mapping outside the loop
+for idx, row in roi.iterrows():
+    print(f"Processing ROI {idx + 1}/{len(roi)}")
+    
+    # Construct directory path for saving data
+    output_folder = os.path.join(raw_path, row['name'], row['location'])
+    os.makedirs(output_folder, exist_ok=True)
+    print(f"Output folder created: {output_folder}")
+    
+    # Map aid numbers to output folders
+    aid_number = f'aid{str(idx + 1).zfill(4)}'  # Construct aid number
+    aid_folder_mapping[aid_number] = (row['name'], row['location'])  # Map aid number to folder
 
-    # Water filter
-    bdf['LST_filter'] = np.where(bdf['wt'] == 0, np.nan, bdf['LST_filter'])
-    print(bdf.columns)
-    return bdf
+# Phase 3: Check the status of the single task
+print("All tasks submitted!")
+print("Checking task statuses...")
+status = check_task_status(task_id, headers)
+if status:
+    print(f"Downloading results for Task ID: {task_id}...")
+    download_results(task_id, headers)  # Pass the roi DataFrame for dynamic mapping    
+print("All tasks completed, results downloaded!")
 
-# Save filtered data as GeoTIFF and CSV
-def save_filtered_data(bdf, filtered_path):
-    bdf.to_csv(filtered_path + '_filterequests.csv', index=False)
-    # Rebuild raster from filtered data
-    with rasterio.open(filtered_path + '_filterequests.tif', 'w', **meta) as dest:
-        dest.write(bdf['LST_filter'].values.reshape(shape), 1)
-
-# Example usage
-bdf = pd.DataFrame({
-    'LST': [1, 2, 3],
-    'QC': [15, 0, 3525],
-    'cloud': [0, 1, 0],
-    'wt': [1, 1, 0]
-})
-
-filtered_bdf = filter_data(bdf)
-save_filtered_data(filtered_bdf, "filtered_path")
-"""
-
-
-"""
-            if os.path.isdir(dr_sub_path):
-                fl = [os.path.join(dr_sub_path, f) for f in os.listdir(dr_sub_path) if f.endswith(".tif")]
-                
-                # Extract metadata
-                dt = list(set([f.split("doy")[-1].split("_")[0] for f in fl]))
-                ly = list(set([f.split("002_")[-1].split("_doy")[0] for f in fl]))
-                prj = list(set([f.split("01_")[-1].split(".tif")[0] for f in fl]))
-                
-                for date in dt:
-                    matching_files = [f for f in fl if date in f]
-                    bands = {}
-                    
-                    # Read relevant raster bands
-                    for f in matching_files:
-                        with rasterio.open(f) as src:
-                            if "LST" in f:
-                                bands["LST"] = src.read(1)
-                            elif "LST_err" in f:
-                                bands["LST_err"] = src.read(1)
-                            elif "QC" in f:
-                                bands["QC"] = src.read(1)
-                            elif "water" in f:
-                                bands["water"] = src.read(1)
-                            elif "cloud" in f:
-                                bands["cloud"] = src.read(1)
-                            elif "EmisWB" in f:
-                                bands["EmisWB"] = src.read(1)
-                            elif "height" in f:
-                                bands["height"] = src.read(1)
-                            meta = src.meta
-                    
-                    # Convert raster to DataFrame
-                    bdf = pd.DataFrame({
-                        "x": np.repeat(np.arange(bands["LST"].shape[1]), bands["LST"].shape[0]),
-                        "y": np.tile(np.arange(bands["LST"].shape[0]), bands["LST"].shape[1]),
-                        **bands
-                    })
-                    
-                    # Apply filters
-                    qc_mask = bdf["QC"].isin([15, 2501, 3525, 65535])
-                    cloud_mask = bdf["cloud"] == 1
-                    water_mask = bdf["water"] == 0
-                    
-                    for key in ["LST", "LST_err", "QC", "EmisWB", "height"]:
-                        bdf[f"{key}_filter"] = bdf[key]
-                        bdf.loc[qc_mask | cloud_mask | water_mask, f"{key}_filter"] = np.nan
-                    
-                    # Save filtered CSV
-                    csv_filename = f"{ptout}{dr}/{dr_sub}/{dr}_{dr_sub}_{date}_{prj[0]}_filter.csv"
-                    os.makedirs(os.path.dirname(csv_filename), exist_ok=True)
-                    bdf.to_csv(csv_filename, index=False)
-                    
-                    # Rebuild filtered raster
-                    filtered_rasters = [bdf[f"{key}_filter"].values.reshape(meta['height'], meta['width']) for key in ["LST", "LST_err", "QC", "EmisWB", "height"]]
-                    meta.update({"count": len(filtered_rasters)})
-                    tif_filename = f"{ptout}{dr}/{dr_sub}/{dr}_{dr_sub}_{date}_{prj[0]}_filter.tif"
-                    
-                    with rasterio.open(tif_filename, "w", **meta) as dst:
-                        for idx, layer in enumerate(filtered_rasters, start=1):
-                            dst.write(layer, idx)
-
-# Save final multilayer GeoTIFF
-final_tif = os.path.join(ptout, "multily_filt.tif")
-with rasterio.open(final_tif, "w", **meta) as dst:
-    for idx, layer in enumerate(filtered_rasters, start=1):
-        dst.write(layer, idx)
-"""
+# Phase 4: Process the downloaded files
+process_all(new_files)
