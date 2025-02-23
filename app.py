@@ -29,7 +29,7 @@ app.jinja_env.filters['extract_layer'] = extract_layer
 
 @app.route('/feature/<feature_id>')
 def feature_page(feature_id):
-    geojson_path = os.path.join(root_folder, 'sat-water-temps', 'static', 'polygons.geojson')  # Adjust path as needed
+    geojson_path = os.path.join(root_folder, 'sat-water-temps', 'static', 'polygons_new.geojson')  # Adjust path as needed
 
     # Load GeoJSON and find the lake feature
     with open(geojson_path, 'r') as f:
@@ -142,7 +142,8 @@ def multi_tif_to_png(tif_path):
 
         # Grayscale custom output
         # Stack bands as RGB, using only the first band as grayscale
-        img_array = np.stack([norm_bands[3], norm_bands[0], norm_bands[4]], axis=-1)  # Use bands 0, 3, and 4 as RGB
+        # Can add selector for different color combinations and what not
+        img_array = np.stack([norm_bands[0], norm_bands[3], norm_bands[4]], axis=-1)  # Use bands 0, 3, and 4 as RGB
         
         # Add transparency channel (alpha)
         img_array = np.dstack((img_array, alpha_mask[0]))

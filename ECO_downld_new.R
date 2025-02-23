@@ -8,17 +8,17 @@
 library(appeears)
 library(sf)
 #set main working directory
-pt<-"D:/ECOraw/"
+pt<-"C:/Users/abdul/Documents/Uni/y2/2019 (SEGP)/Water Temp Sensors/test/ECOraw/"
 
 # set a key to the keychain
 ##it needs an account set up in Earthdata (https://www.earthdata.nasa.gov/)
 options(keyring_backend = "file")
 rs_set_key(
-  user = "monviso",
-  password = "1Morfoclimb!"
+  user = "abdullahusmani1",
+  password = "haziqLOVERS123!"
 )
 #get token
-token <- rs_login(user = "monviso")
+token <- rs_login(user = "abdullahusmani1")
 products <- rs_products()
 
 layers <- rs_layers(
@@ -44,7 +44,7 @@ df <- data.frame(
 
 
 ##area of interest
-roi<-st_read("E:/OneDrive/Documents/satData_AppEEars/csv_dam/shp/polygon/site_full_ext.shp")
+roi<-st_read("C:/Users/abdul/Documents/Uni/y2/2019 (SEGP)/Water Temp Sensors/polygon/test/site_full_ext_Test.shp")
 
 
 for (i in 1: nrow(roi)){
@@ -59,7 +59,7 @@ for (i in 1: nrow(roi)){
 #download locally
   rs_request(
    request = task,
-   user = "monviso",
+   user = "abdullahusmani1",
    transfer = TRUE,
    path = paste0(pt, roi2$name, roi2$location, "/" ),
    verbose = TRUE
@@ -75,9 +75,9 @@ dr_sub[k]
 
 #produce multi-layer GeoTiff
 library(terra)
-pt<-"D:/ECOraw/"
-pt<-"D:/ECO/"
-roi<-st_read("E:/OneDrive/Documents/satData_AppEEars/csv_dam/shp/polygon/site_full_ext.shp")
+pt<-"C:/Users/abdul/Documents/Uni/y2/2019 (SEGP)/Water Temp Sensors/test/ECOraw/"
+ptout<-"C:/Users/abdul/Documents/Uni/y2/2019 (SEGP)/Water Temp Sensors/test/ECO/"
+roi<-st_read("C:/Users/abdul/Documents/Uni/y2/2019 (SEGP)/Water Temp Sensors/polygon/test/site_full_ext_Test.shp")
 
 dr<-list.dirs(pt, full.names = F, recursive = F)
 for (i in 1:length(dr)){
@@ -121,11 +121,11 @@ for (i in 1:length(dr)){
       
       ##NEW!!
       #water filter
-      bdf$LST_filter<-ifelse(bdf$wt==0, NA, bdf$LST_filter)
-      bdf$LST_err_filter<-ifelse(bdf$wt==0, NA, bdf$LST_err_filter)
-      bdf$QC_filter<-ifelse(bdf$wt==0, NA, bdf$QC_filter)
-      bdf$emis_filter<-ifelse(bdf$wt==0, NA, bdf$emis_filter)
-      bdf$heig_filter<-ifelse(bdf$wt==0, NA, bdf$heig_filter)
+      # bdf$LST_filter<-ifelse(bdf$wt==0, NA, bdf$LST_filter)
+      # bdf$LST_err_filter<-ifelse(bdf$wt==0, NA, bdf$LST_err_filter)
+      # bdf$QC_filter<-ifelse(bdf$wt==0, NA, bdf$QC_filter)
+      # bdf$emis_filter<-ifelse(bdf$wt==0, NA, bdf$emis_filter)
+      # bdf$heig_filter<-ifelse(bdf$wt==0, NA, bdf$heig_filter)
       
       write.csv(bdf, paste0(ptout, dr[i], dr_sub[k], "/",dr[i],"_",dr_sub[k], "_", dt[j], "_", prj, "_filter.csv" ))
       ##might consider to remove all NA lines of bdf for optimizing storage space
@@ -144,4 +144,4 @@ for (i in 1:length(dr)){
   }
 }
 
-writeRaster(b2, "D:/ECO/multily_filt.tif", overwrite=T)
+writeRaster(b2, "C:/Users/abdul/Documents/Uni/y2/2019 (SEGP)/Water Temp Sensors/test/ECO/multi.tif", overwrite=T)

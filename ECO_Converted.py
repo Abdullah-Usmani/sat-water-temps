@@ -14,7 +14,7 @@ from multiprocessing import Pool, cpu_count
 print("Setting Directory Paths")
 raw_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/ECOraw/"
 filtered_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/ECO/"
-roi_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/polygon/corrected/site_full_ext_corrected.shp"
+roi_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/polygon/new_polygons.shp"
 log_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/logs/"
 
 # Get token (API login via r)
@@ -48,14 +48,14 @@ timestamp = datetime.now().strftime("%Y%m%d_%H%M")
 print("Setting Dates")
 today_date = datetime.now()
 today_date_str = today_date.strftime("%m-%d-%Y")
-ed = today_date_str
-# ed = "02-04-2025"
+# ed = today_date_str
+ed = "01-31-2025"
 
 # Get Yesterday Date as Start Date
 yesterday_date = today_date - timedelta(days=1)
 yesterday_date_str = yesterday_date.strftime("%m-%d-%Y")
-sd = yesterday_date_str
-# sd = "02-19-2025"
+# sd = yesterday_date_str
+sd = "01-26-2025"
 
 # KEY RESULTS TO STORE/LOG
 updated_aids = set()
@@ -145,9 +145,12 @@ def download_results(task_id, headers):
         aid_match = re.search(r'aid(\d{4})', file_name)  # Extract aid number from filename
 
         if aid_match:
-            aid_number = aid_match.group(0)  # Get the full aid number string (e.g., "aid0001")
-            updated_aids.add(extract_metadata(file_name)[0])  # Track updated aids
+            aid_number = extract_metadata(file_name)[0]
+            updated_aids.add(aid_number)  # Track updated aids
             name, location = aid_folder_mapping.get(aid_number, (None, None))
+            if name is None or location is None:
+                print(f"No mapping found for AID: {aid_number}, skipping...")
+                continue
             output_folder = os.path.join(raw_path, name, location)
             
             if output_folder is not None:
@@ -173,7 +176,7 @@ def download_results(task_id, headers):
             new_file_name = f"{base_name}_{timestamp}{ext}"  # Append timestamp before extension
             local_filename = os.path.join(raw_path, new_file_name)  # Save directly to the base folder
 
-            print(f"Downloading to base folder: {local_filename}")
+            # print(f"Downloading to base folder: {local_filename}")
 
             download_url = f"{url}/{file_id}"
             download_response = requests.get(download_url, headers=headers, stream=True, allow_redirects=True)
@@ -282,7 +285,6 @@ def process_rasters(aid_number, date, new_files):
     }.items()}
 
     # Get AID number
-    aid_number = extract_metadata(relevant_files[0])[0]
     name, location = aid_folder_mapping.get(aid_number, (None, None))
     if not name or not location:
         print(f"No mapping found for AID: {aid_number}, skipping...")
@@ -414,9 +416,9 @@ def cleanup_old_files(folder_path, days_old=20):
 
 
 # Phase 1: Submit task in one go
-task_request = build_task_request(product, layers, roi_json, sd, ed)
-task_id = submit_task(headers, task_request)
-# task_id = "6c4bc1d7-a501-43fb-8f54-7ae09f1f573f"
+# task_request = build_task_request(product, layers, roi_json, sd, ed)
+# task_id = submit_task(headers, task_request)
+task_id = "dc6b9cc9-5038-42e8-895e-3f5ae55a2601"
 print(f"Task ID: {task_id}")
 
 # Phase 2: Create Directories and Mapping
@@ -430,7 +432,8 @@ for idx, row in roi.iterrows():
     print(f"Output folder created: {output_folder}")
     
     # Map aid numbers to output folders
-    aid_number = f'aid{str(idx + 1).zfill(4)}'  # Construct aid number
+#    aid_number = f'aid{str(idx + 1).zfill(4)}'  # Construct aid number
+    aid_number = idx  # Construct aid number
     aid_folder_mapping[aid_number] = (row['name'], row['location'])  # Map aid number to folder
 
 # Phase 3: Check the status of the single task
