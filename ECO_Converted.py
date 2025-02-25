@@ -14,7 +14,7 @@ from multiprocessing import Pool, cpu_count
 print("Setting Directory Paths")
 raw_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/ECOraw/"
 filtered_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/ECO/"
-roi_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/polygon/new_polygons.shp"
+roi_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/polygon/magat/magat_shape.shp"
 log_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/logs/"
 
 # Get token (API login via r)
@@ -49,18 +49,23 @@ print("Setting Dates")
 today_date = datetime.now()
 today_date_str = today_date.strftime("%m-%d-%Y")
 # ed = today_date_str
-ed = "01-31-2025"
+# ed = "01-31-2025"
+ed = "09-16-2023"
+
 
 # Get Yesterday Date as Start Date
 yesterday_date = today_date - timedelta(days=1)
 yesterday_date_str = yesterday_date.strftime("%m-%d-%Y")
 # sd = yesterday_date_str
-sd = "01-26-2025"
+# sd = "01-26-2025"
+sd = "08-01-2023"
 
 # KEY RESULTS TO STORE/LOG
 updated_aids = set()
 new_files = []
 new_dates = []
+multi_aids = set()
+multi_files = []
 aid_folder_mapping = {}
 # Invalid QC values
 INVALID_QC_VALUES = {15, 2501, 3525, 65535}
@@ -146,6 +151,7 @@ def download_results(task_id, headers):
 
         if aid_match:
             aid_number = extract_metadata(file_name)[0]
+            aid_number -= 1 
             updated_aids.add(aid_number)  # Track updated aids
             name, location = aid_folder_mapping.get(aid_number, (None, None))
             if name is None or location is None:
@@ -188,43 +194,6 @@ def download_results(task_id, headers):
             new_files.append(local_filename)  # Track newly downloaded file
             print(f"Downloaded {local_filename}")
 
-        # Open the log file in append mode
-    file_path = f"updates_{timestamp}.txt"  # Each run creates a new file
-    os.path.join(log_path, file_path)
-
-    # Open the new file and save updates
-    with open(file_path, 'w', encoding='utf-8') as file:
-        file.write(f"Timestamp: {timestamp}\n\n")
-
-        # Log task information
-        file.write("[Task Info]\n")
-        file.write(json.dumps(task_id, indent=4))  # Format JSON output
-        file.write(json.dumps(sd, indent=4))  # Format JSON output
-        file.write(json.dumps(ed, indent=4))  # Format JSON output
-        file.write("\n")
-
-        # Log list update
-        file.write("[Updated Aids]\n")
-        file.write(json.dumps(list(updated_aids), indent=4))  # Format JSON output
-        file.write("\n")
-        
-        # Log dictionary update
-        file.write("[New Files]\n")
-        file.write(json.dumps(new_files, indent=4))  # Format JSON output
-        file.write("\n\n")
-
-        # Log list update
-        file.write("[New Dates]\n")
-        # file.write(json.dumps(new_dates, indent=4))  # Format JSON output
-        file.write("\n")
-        
-        # Log dictionary update
-        file.write("[Aid Folder Mapping]\n")
-        file.write(json.dumps(aid_folder_mapping, indent=4))  # Format JSON output
-        file.write("\n\n")
-
-    print(f"Updates saved to {file_path}.")
-
 # Function to extract aid number and date from filename
 def extract_metadata(filename):
     aid_match = re.search(r'aid(\d{4})', filename)
@@ -255,16 +224,16 @@ def read_array(raster):
 # Function to process a single date
 def process_rasters(aid_number, date, new_files):
     print(f"Processing date: {date} for aid: {aid_number}")
-    relevant_files = []
+    relevant_files = new_files
     # for f in new_files if aid_number and date in FILENAME, 
-    for f in new_files:
-        aid, f_date = extract_metadata(f)
-        if aid == aid_number and date == f_date:
-            relevant_files.append(f)
-    # relevant_files = [f for f in new_files if date in f]
-    if not relevant_files:
-        print(f"No files found for date: {date}")
-        return
+    # for f in new_files:
+    #     aid, f_date = extract_metadata(f)
+    #     if aid == aid_number and date == f_date:
+    #         relevant_files.append(f)
+    # # relevant_files = [f for f in new_files if date in f]
+    # if not relevant_files:
+    #     print(f"No files found for date: {date}")
+    #     return
 
     # Read raster layers
     LST = read_raster("LST_doy", relevant_files)
@@ -329,11 +298,12 @@ def process_rasters(aid_number, date, new_files):
 
     for col in ["LST_filter", "LST_err_filter", "QC_filter", "EmisWB_filter", "height_filter"]:
         df[f"{col}"] = np.where(df["cloud"] == 1, np.nan, df[col])
-        # df[f"{col}"] = np.where(df["wt"] == 0, np.nan, df[col])
+        df[f"{col}"] = np.where(df["wt"] == 0, np.nan, df[col])
 
     # Save filtered CSV
     filter_csv_path = os.path.join(dest_folder_filtered, f"{name}_{location}_{date}_filter.csv")
     df.to_csv(filter_csv_path, index=False)
+    multi_files.append(filter_csv_path)
     print(f"Saved filtered CSV: {filter_csv_path}")
 
     # Convert filtered data back to raster
@@ -359,6 +329,8 @@ def process_rasters(aid_number, date, new_files):
     with rasterio.open(filter_tif_path, "w", **filter_meta) as dst:
         for idx, (key, (data, _)) in enumerate(filtered_rasters.items(), start=1):
             dst.write(data, idx)  # Ensure correct band range
+    multi_aids.add(aid_number)
+    multi_files.append(filter_tif_path)
     print(f"Saved filtered raster: {filter_tif_path}")
 
     print(f"Finished processing {date}")
@@ -378,7 +350,7 @@ def process_all(all_new_files):
     for aid_number in updated_aids:
         aid_folder_files = []
         for file in all_new_files:
-            if aid_number == extract_metadata(file)[0]:
+            if aid_number + 1 == extract_metadata(file)[0]:
                 aid_folder_files.append(file)
         new_dates_get = get_updated_dates(aid_folder_files)
         if not new_dates_get:
@@ -415,10 +387,57 @@ def cleanup_old_files(folder_path, days_old=20):
                 print(f"Deleted {filename} (last modified on {file_mod_time})")
 
 
+def log_updates():
+    # Open the log file in append mode
+    file_path = f"updates_{timestamp}.txt"  # Each run creates a new file
+    full_path = os.path.join(log_path, file_path)
+
+    # Open the new file and save updates
+    with open(full_path, 'w', encoding='utf-8') as file:
+        file.write(f"Timestamp: {timestamp}\n\n")
+
+        # Log task information
+        file.write("[Task Info]\n")
+        file.write(json.dumps(task_id, indent=4))  # Format JSON output
+        file.write(json.dumps(sd, indent=4))  # Format JSON output
+        file.write(json.dumps(ed, indent=4))  # Format JSON output
+        file.write("\n\n")
+
+        # Log list update
+        file.write("[Updated Aids]\n")
+        file.write(json.dumps(list(updated_aids), indent=4))  # Format JSON output
+        file.write("\n\n")
+        
+        # Log dictionary update
+        file.write("[New Files]\n")
+        file.write(json.dumps(new_files, indent=4))  # Format JSON output
+        file.write("\n\n")
+
+        # Log list update
+        file.write("[New Dates]\n")
+        file.write("\n\n")
+
+        # Log list update
+        file.write("[Multi Aids]\n")
+        file.write(json.dumps(list(multi_aids), indent=4))  # Format JSON output
+        file.write("\n\n")
+
+        # Log list update
+        file.write("[Multi Files]\n")
+        file.write(json.dumps(multi_files, indent=4))  # Format JSON output
+        file.write("\n\n")
+        
+        # Log dictionary update
+        file.write("[Aid Folder Mapping]\n")
+        file.write(json.dumps(aid_folder_mapping, indent=4))  # Format JSON output
+        file.write("\n\n")
+
+    print(f"Updates saved to {full_path}.")
+
 # Phase 1: Submit task in one go
-# task_request = build_task_request(product, layers, roi_json, sd, ed)
-# task_id = submit_task(headers, task_request)
-task_id = "dc6b9cc9-5038-42e8-895e-3f5ae55a2601"
+task_request = build_task_request(product, layers, roi_json, sd, ed)
+task_id = submit_task(headers, task_request)
+# task_id = "dc6b9cc9-5038-42e8-895e-3f5ae55a2601"
 print(f"Task ID: {task_id}")
 
 # Phase 2: Create Directories and Mapping
@@ -447,6 +466,10 @@ print("All tasks completed, results downloaded!")
 
 # Phase 4: Process the downloaded files
 process_all(new_files)
+
+
+# Phase 6: Log updates
+log_updates()
 
 # Phase 5: Cleanup old files
 # cleanup_old_files(raw_path, days_old=20)

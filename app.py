@@ -143,7 +143,7 @@ def multi_tif_to_png(tif_path):
         # Grayscale custom output
         # Stack bands as RGB, using only the first band as grayscale
         # Can add selector for different color combinations and what not
-        img_array = np.stack([norm_bands[0], norm_bands[3], norm_bands[4]], axis=-1)  # Use bands 0, 3, and 4 as RGB
+        img_array = np.stack([norm_bands[0], norm_bands[0], norm_bands[0]], axis=-1)  # Use bands 0, 3, and 4 as RGB
         
         # Add transparency channel (alpha)
         img_array = np.dstack((img_array, alpha_mask[0]))
