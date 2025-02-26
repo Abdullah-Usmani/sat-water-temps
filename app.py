@@ -48,7 +48,7 @@ def feature_page(feature_id):
 
 @app.route('/feature/<feature_id>/archive')
 def feature_archive(feature_id):
-    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECOraw', feature_id, 'lake')
+    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
     # Add data_folder check for RIVER folder
 
     if not os.path.isdir(data_folder):
@@ -158,7 +158,7 @@ def multi_tif_to_png(tif_path):
     
 @app.route('/serve_tif_as_png/<feature_id>/<filename>')
 def serve_tif_as_png(feature_id, filename):
-    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECOraw', feature_id, 'lake')
+    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
     tif_path = os.path.join(data_folder, filename)
 
     if not os.path.exists(tif_path):

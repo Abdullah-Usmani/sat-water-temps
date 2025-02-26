@@ -14,7 +14,7 @@ from multiprocessing import Pool, cpu_count
 print("Setting Directory Paths")
 raw_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/ECOraw/"
 filtered_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/ECO/"
-roi_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/polygon/magat/magat_shape.shp"
+roi_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/polygon/new_polygons.shp"
 log_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/logs/"
 
 # Get token (API login via r)
@@ -49,16 +49,15 @@ print("Setting Dates")
 today_date = datetime.now()
 today_date_str = today_date.strftime("%m-%d-%Y")
 # ed = today_date_str
-# ed = "01-31-2025"
-ed = "09-16-2023"
+ed = "02-11-2025"
 
 
 # Get Yesterday Date as Start Date
 yesterday_date = today_date - timedelta(days=1)
 yesterday_date_str = yesterday_date.strftime("%m-%d-%Y")
 # sd = yesterday_date_str
-# sd = "01-26-2025"
-sd = "08-01-2023"
+sd = "02-05-2025"
+# sd = "08-01-2023"
 
 # KEY RESULTS TO STORE/LOG
 updated_aids = set()
@@ -150,8 +149,7 @@ def download_results(task_id, headers):
         aid_match = re.search(r'aid(\d{4})', file_name)  # Extract aid number from filename
 
         if aid_match:
-            aid_number = extract_metadata(file_name)[0]
-            aid_number -= 1 
+            aid_number = extract_metadata(file_name)[0] 
             updated_aids.add(aid_number)  # Track updated aids
             name, location = aid_folder_mapping.get(aid_number, (None, None))
             if name is None or location is None:
@@ -222,18 +220,19 @@ def read_array(raster):
     return raster.read(1) if raster else None
 
 # Function to process a single date
-def process_rasters(aid_number, date, new_files):
+def process_rasters(aid_number, date, selected_files):
     print(f"Processing date: {date} for aid: {aid_number}")
-    relevant_files = new_files
-    # for f in new_files if aid_number and date in FILENAME, 
-    # for f in new_files:
-    #     aid, f_date = extract_metadata(f)
-    #     if aid == aid_number and date == f_date:
-    #         relevant_files.append(f)
-    # # relevant_files = [f for f in new_files if date in f]
-    # if not relevant_files:
-    #     print(f"No files found for date: {date}")
-    #     return
+    relevant_files = []
+    water_mask_flag = True
+    # for f in selected_files if aid_number and date in FILENAME, 
+    for f in selected_files:
+        aid, f_date = extract_metadata(f)
+        if aid == aid_number and date == f_date:
+            relevant_files.append(f)
+    # relevant_files = [f for f in selected_files if date in f]
+    if not relevant_files:
+        print(f"No files found for date: {date}")
+        return
 
     # Read raster layers
     LST = read_raster("LST_doy", relevant_files)
@@ -292,16 +291,29 @@ def process_rasters(aid_number, date, new_files):
     df.to_csv(raw_csv_path, index=False)
     print(f"Saved raw CSV: {raw_csv_path}")
 
+    filter_csv_path = os.path.join(dest_folder_filtered, f"{name}_{location}_{date}_filter.csv")
+    filter_tif_path = os.path.join(dest_folder_filtered, f"{name}_{location}_{date}_filter.tif")
+
+    if not df["wt"].isin([1]).any():
+        # print("Water not detected.")
+        water_mask_flag = False
+    else:
+        water_mask_flag = True
+
     # Apply filtering
     for col in ["LST", "LST_err", "QC", "EmisWB", "height"]:
         df[f"{col}_filter"] = np.where(df["QC"].isin(INVALID_QC_VALUES), np.nan, df[col])
 
     for col in ["LST_filter", "LST_err_filter", "QC_filter", "EmisWB_filter", "height_filter"]:
         df[f"{col}"] = np.where(df["cloud"] == 1, np.nan, df[col])
-        df[f"{col}"] = np.where(df["wt"] == 0, np.nan, df[col])
 
+    if water_mask_flag:
+        for col in ["LST_filter", "LST_err_filter", "QC_filter", "EmisWB_filter", "height_filter"]:
+            df[f"{col}"] = np.where(df["wt"] == 0, np.nan, df[col])
+        filter_csv_path = os.path.join(dest_folder_filtered, f"{name}_{location}_{date}_filter_wtoff.csv")
+        filter_tif_path = os.path.join(dest_folder_filtered, f"{name}_{location}_{date}_filter_wtoff.tif")
     # Save filtered CSV
-    filter_csv_path = os.path.join(dest_folder_filtered, f"{name}_{location}_{date}_filter.csv")
+    
     df.to_csv(filter_csv_path, index=False)
     multi_files.append(filter_csv_path)
     print(f"Saved filtered CSV: {filter_csv_path}")
@@ -321,7 +333,6 @@ def process_rasters(aid_number, date, new_files):
     }
 
     # Save filtered raster
-    filter_tif_path = os.path.join(dest_folder_filtered, f"{name}_{location}_{date}_filter.tif")
     filter_meta = filtered_rasters["LST"][1].copy()
     filter_meta.update(dtype=rasterio.float32, count=len(filtered_rasters))  # Correct band count
 
@@ -339,18 +350,20 @@ def process_rasters(aid_number, date, new_files):
 def process_all(all_new_files):
     # updated_aids = get_updated_folders(all_new_files)
     print(updated_aids)
-
     if not updated_aids:
         print("No new folders to process.")
         return
-
+    
     print(f"Processing {len(updated_aids)} updated folders...")
+
+    # updated_aids = list(updated_aids)
 
     # Process each updated folder and date
     for aid_number in updated_aids:
+        # print(type(aid_number))
         aid_folder_files = []
         for file in all_new_files:
-            if aid_number + 1 == extract_metadata(file)[0]:
+            if aid_number == extract_metadata(file)[0]:
                 aid_folder_files.append(file)
         new_dates_get = get_updated_dates(aid_folder_files)
         if not new_dates_get:
@@ -437,10 +450,9 @@ def log_updates():
 # Phase 1: Submit task in one go
 task_request = build_task_request(product, layers, roi_json, sd, ed)
 task_id = submit_task(headers, task_request)
-# task_id = "dc6b9cc9-5038-42e8-895e-3f5ae55a2601"
 print(f"Task ID: {task_id}")
 
-# Phase 2: Create Directories and Mapping
+# # Phase 2: Create Directories and Mapping
 # aid_folder_mapping = {}  # Initialize mapping outside the loop
 for idx, row in roi.iterrows():
     print(f"Processing ROI {idx + 1}/{len(roi)}")
@@ -452,7 +464,7 @@ for idx, row in roi.iterrows():
     
     # Map aid numbers to output folders
 #    aid_number = f'aid{str(idx + 1).zfill(4)}'  # Construct aid number
-    aid_number = idx  # Construct aid number
+    aid_number = int(idx + 1)  # Construct aid number
     aid_folder_mapping[aid_number] = (row['name'], row['location'])  # Map aid number to folder
 
 # Phase 3: Check the status of the single task
@@ -466,7 +478,6 @@ print("All tasks completed, results downloaded!")
 
 # Phase 4: Process the downloaded files
 process_all(new_files)
-
 
 # Phase 6: Log updates
 log_updates()
