@@ -9,9 +9,9 @@ from datetime import datetime, timedelta
 
 # Directory paths
 print("Setting Directory Paths")
-pt = r"C:\Users\Abdullah Usmani\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/ECOraw/"
-output_path = r"C:\Users\Abdullah Usmani\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/ECO/"
-roi_path = r"C:\Users\Abdullah Usmani\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/polygon/test/site_full_ext_Test.shp"
+pt = r"C:\Users\ahmad\Documents\SEGP\Water Temp Sensors\Water Temp Sensors\ECOraw"
+#   output_path = r"C:\Users\Abdullah Usmani\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/ECO/"
+roi_path = r"C:\Users\ahmad\Documents\SEGP\Water Temp Sensors\Water Temp Sensors\polygon\test\site_full_ext_Test.shp"
 
 if not os.path.exists(roi_path):
     raise FileNotFoundError(f"The ROI shapefile does not exist at {roi_path}")
@@ -55,7 +55,7 @@ sd = "10-01-2024"
 
 # Products, Headers and layers
 product = "ECO_L2T_LSTE.002"
-headers = {
+headers = { 
     'Authorization': f'Bearer {token}'
 }
 layers = ["LST", "LST_err"]

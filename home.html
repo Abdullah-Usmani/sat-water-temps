@@ -2,127 +2,124 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale="1.0>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Satellite Water Temperature Monitoring</title>
 
-    <!-- Styling for the page -->
-    <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #000;
-            color: white;
-        }
+    <!-- Link to external stylesheet -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap">
+    <link rel="stylesheet" href="main.css">
 
-        a {
-            text-decoration: none;
-            color: #00aaff;
-        }
-
-        header {
-            background-color: #0b3d91;
-            padding: 20px;
-            color: white;
-            text-align: center;
-            font-size: 26px;
-            font-weight: bold;
-        }
-
-        nav {
-            display: flex;
-            justify-content: center;
-            background-color: #1f4f96;
-            padding: 15px;
-        }
-
-        nav a {
-            margin: 0 20px;
-            color: #fff;
-            font-size: 18px;
-            text-transform: uppercase;
-            font-weight: bold;
-        }
-
-        .hero {
-            background: url('satellite-view.jpg') no-repeat center center/cover;
-            height: 500px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            text-align: center;
-            font-size: 36px;
-            font-weight: bold;
-        }
-
-        section {
-            padding: 40px;
-            max-width: 1200px;
-            margin: auto;
-        }
-
-        .intro {
-            text-align: center;
-            padding: 30px;
-            background-color: #1a1a1a;
-            border-radius: 8px;
-        }
-
-        .chart-container, .slider-container, .map-container {
-            margin-top: 40px;
-            background-color: #1a1a1a;
-            padding: 20px;
-            border-radius: 8px;
-        }
-
-        .chart-container {
-            display: flex;
-            justify-content: space-between;
-            flex-wrap: wrap;
-        }
-
-        .chart, .round-chart {
-            width: 48%;
-        }
-
-        .round-chart {
-            max-height: 400px; /* Ensure doughnut chart does not overflow */
-        }
-
-        .slider {
-            width: 80%;
-            margin: 20px auto;
-        }
-
-        .footer {
-            background-color: #0b3d91;
-            color: white;
-            padding: 20px;
-            text-align: center;
-            margin-top: 40px;
-        }
-
-        #map {
-            height: 300px;
-            width: 100%;
-        }
-
-        #locationSelect {
-            margin: 20px;
-            padding: 10px;
-            font-size: 16px;
-        }
-    </style>
-
+    <!-- Load necessary libraries -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 
+    <style>
+        /* General Styles */
+        body {
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #121212;
+            color: #fff;
+            transition: all 0.3s ease-in-out;
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, #0b3d91, #48c6ef);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            font-size: 32px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        /* Navigation Bar */
+        nav {
+            background-color: #1e1e1e;
+            padding: 10px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            border-bottom: 2px solid #fff;
+        }
+
+        nav a {
+            color: #fff;
+            text-decoration: none;
+            font-size: 16px;
+            text-transform: uppercase;
+            font-weight: 600;
+            padding: 10px;
+            transition: background-color 0.3s ease;
+        }
+
+        nav a:hover {
+            background-color: #00aaff;
+            border-radius: 5px;
+        }
+
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            padding: 50px 20px;
+            background: linear-gradient(to right, #0b3d91, #48c6ef);
+            color: #fff;
+            font-size: 40px;
+            font-weight: 700;
+        }
+
+        .hero h1 {
+            margin: 0;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.6);
+        }
+
+        /* Map Section */
+        .map-container {
+            text-align: center;
+            padding: 20px;
+            background: #222;
+            margin: 0;
+            width: 100vw;
+            height: 90vh;
+            border-radius: 0;
+            box-shadow: none;
+            position: relative;
+            border-top: 5px solid #48c6ef;
+            margin-top: -40px; /* Adjust this value to move it up */
+        }
+
+        .map-container h3 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            color: #fff;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+            border-radius: 10px;
+        }
+
+        /* Footer */
+        footer {
+            background-color: #1e1e1e;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 14px;
+            margin-top: 20px;
+        }
+
+    </style>
 </head>
 <body>
 
-    <!-- Header and Navigation -->
     <header>
         Satellite-Based Water Temperature Monitoring
     </header>
@@ -135,202 +132,59 @@
         <a href="contact.html">Contact</a>
     </nav>
 
-    <!-- Hero Section -->
     <div class="hero">
-        Real-Time Global Water Temperature Analysis
+        <h1>Real-Time Global Water Temperature Analysis</h1>
     </div>
 
-    <!-- Main Content Section -->
-    <section>
-        <div class="intro">
-            <h2>Explore Our Satellite Data</h2>
-            <p>Welcome to the cutting-edge platform where we analyze water temperature data from space. With real-time information from Ecostress and Sentinel 2 satellites, you can monitor water bodies across Southeast Asia.</p>
-            <p id="currentDayDisplay"></p>
-        </div>
-
-        <!-- JavaScript for displaying the current day -->
-        <script>
-            const currentDate = new Date();
-            const currentDayString = currentDate.toLocaleDateString('en-US', {
-                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-            });
-            document.getElementById('currentDayDisplay').innerText = `Current Day: ${currentDayString}`;
-        </script>
-
-        <!-- Map Section for Dam Locations -->
-        <div class="map-container">
-            <h3>Dam Locations</h3>
-            <div id="map" style="height: 500px; width: 100%;"></div>
-        </div>
-    </section>
-
-    <!-- Footer -->
-    <div class="footer">
-        © 2024 Water Temperature Monitoring Platform | All Rights Reserved
+    <div class="map-container">
+        <h3>Satellite Map</h3>
+        <div id="map"></div>
     </div>
 
-    <!-- Script for Chart.js (Interactive with Slider and Location Select) -->
+    <footer>
+        &copy; 2025 Satellite Water Temperature Monitoring. All rights reserved.
+    </footer>
+
     <script>
-        // Initialize the map and set its view to a geographical location and zoom level
-        const map = L.map('map').setView([2.5, 112.5], 6); // Centered over Sarawak
-
-        // Add a tile layer (background map)
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-        }).addTo(map);
-
-        // Load GeoJSON data
-        fetch("polygons2.geojson")
-            .then(response => response.json())
-            .then(data => {
-                // Add GeoJSON layer to the map
-                L.geoJSON(data, {
-                    onEachFeature: function (feature, layer) {
-                        // Optionally bind a popup with more information
-                        layer.bindPopup(`Location: ${feature.properties.name}`);
-                    }
-                }).addTo(map);
+        document.addEventListener("DOMContentLoaded", function () {
+            const map = L.map('map', {
+                center: [2.5, 112.5], // Initial center
+                zoom: 6, // Initial zoom level
+                minZoom: 2, // Minimum zoom level (lets you zoom out to full Earth view)
+                maxZoom: 19, // Maximum zoom level
+                dragging: true, // Allows dragging the map
+                scrollWheelZoom: true, // Enables zooming by scrolling the mouse wheel
+                zoomControl: true, // Enables zoom control buttons
             });
-
-
-                    // Styling options
-        L.geoJSON(data, {
-            style: function (feature) {
-                return { color: "#ff7800", weight: 2 };
-            },
-            onEachFeature: function (feature, layer) {
-                layer.on({
-                    mouseover: function () { layer.setStyle({ color: "#00ff00" }); },
-                    mouseout: function () { layer.setStyle({ color: "#ff7800" }); },
-                    click: function () {
-                        alert("Polygon clicked!");
-                        // Any additional action on click
-                    }
-                });
-            }
-        }).addTo(map);
-        // // Generate random temperature data for 30 days for 8 locations in Sarawak
-        // const temperatureData = {};
-        // const damData = {};
-        // const numDays = 30;
-        // const locations = [
-        //     'Baleh Dam', 'Murum Dam', 'Bakun Dam', 'Baram Dam',
-        //     'Sg. Tembeling', 'Sg. Selangau', 'Sg. Koyan', 'Sg. Rejang'
-        // ];
-
-        // locations.forEach(location => {
-        //     temperatureData[location] = [];
-        //     damData[location] = {};
-        //     for (let i = 0; i <= numDays; i++) {
-        //         temperatureData[location].push(
-        //             Array(7).fill(0).map(() => Math.floor(Math.random() * (30 - 20 + 1)) + 20) // Random temperatures between 20°C and 30°C
-        //         );
-        //         damData[location][i] = Math.floor(Math.random() * (30 - 20 + 1)) + 20;
-        //     }
-        // });
-
-        // // Initialize chart with Baleh Dam 15 days ago data
-        // const ctx = document.getElementById('tempChart').getContext('2d');
-        // let currentLocation = 'Baleh Dam';
-        // let tempChart = new Chart(ctx, {
-        //     type: 'line',
-        //     data: {
-        //         labels: ['Day 1', 'Day 5', 'Day 10', 'Day 15', 'Day 20', 'Day 25', 'Day 30'],
-        //         datasets: [{
-        //             label: `Water Temperature (°C) - ${currentLocation}`,
-        //             data: temperatureData[currentLocation][15],
-        //             backgroundColor: 'rgba(0, 123, 255, 0.2)',
-        //             borderColor: 'rgba(0, 123, 255, 1)',
-        //             borderWidth: 2,
-        //             fill: true,
-        //         }]
-        //     },
-        //     options: {
-        //         scales: {
-        //             y: {
-        //                 beginAtZero: true
-        //             }
-        //         }
-        //     }
-        // });
-
-        // // Update chart, map, and predictions based on slider and location changes
-        // const slider = document.getElementById('dateSlider');
-        // const sliderValue = document.getElementById('sliderValue');
-        // const locationSelect = document.getElementById('locationSelect');
-
-        // slider.oninput = function() {
-        //     sliderValue.innerText = this.value;
-        //     updateCharts(this.value);
-        // };
-
-        // locationSelect.onchange = function() {
-        //     currentLocation = this.value;
-        //     updateCharts(slider.value);
-        // };
-
-        // function updateCharts(daysAgo) {
-        //     tempChart.data.datasets[0].data = temperatureData[currentLocation][daysAgo];
-        //     tempChart.data.datasets[0].label = `Water Temperature (°C) - ${currentLocation}`;
-        //     tempChart.update();
-
-        //     // Update prediction chart
-        //     const predictionCtx = document.getElementById('predictionChart').getContext('2d');
-        //     new Chart(predictionCtx, {
-        //         type: 'doughnut',
-        //         data: {
-        //             labels: ['Predicted Temp: 28°C', 'Other Predictions'],
-        //             datasets: [{
-        //                 label: 'Temperature Predictions',
-        //                 data: [28, 12],
-        //                 backgroundColor: ['rgba(75, 192, 192, 0.2)', 'rgba(255, 99, 132, 0.2)'],
-        //                 borderColor: ['rgba(75, 192, 192, 1)', 'rgba(255, 99, 132, 1)'],
-        //                 borderWidth: 1
-        //             }]
-        //         },
-        //         options: {
-        //             responsive: true,
-        //             plugins: {
-        //                 legend: {
-        //                     position: 'top',
-        //                 },
-        //                 title: {
-        //                     display: true,
-        //                     text: `Temperature Predictions - ${currentLocation}`
-        //                 }
-        //             }
-        //         }
-        //     });
-        // }
-
-        // // Leaflet map for dam locations
-        // const map = L.map('map').setView([2.5, 112.5], 6); // Centered over Sarawak
-
-        // // Add a tile layer
-        // L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        //     maxZoom: 19,
-        // }).addTo(map);
-
-        // // Dam locations with coordinates
-        // const damLocations = {
-        //     'Baleh Dam': [2.298, 112.522],
-        //     'Murum Dam': [2.304, 113.063],
-        //     'Bakun Dam': [2.281, 113.045],
-        //     'Baram Dam': [3.494, 114.087],
-        //     'Sg. Tembeling': [3.097, 102.318],
-        //     'Sg. Selangau': [2.747, 112.933],
-        //     'Sg. Koyan': [2.517, 113.038],
-        //     'Sg. Rejang': [2.103, 112.945]
-        // };
-
-        // // Create markers for each dam location
-        // for (const [name, coords] of Object.entries(damLocations)) {
-        //     const marker = L.marker(coords).addTo(map);
-        //     marker.bindTooltip(name, { direction: 'top' });
-        // }
-
-        // // Update initial chart display
-        // updateCharts(15);
+    
+            // Add the Esri Satellite layer
+            const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri, Maxar, Earthstar Geographics, and the GIS User Community',
+                maxZoom: 19
+            }).addTo(map); // This adds the satellite layer directly
+    
+            fetch("polygons.geojson")
+                .then(response => response.json())
+                .then(data => {
+                    L.geoJSON(data, {
+                        style: function (feature) {
+                            return { color: "#ff7800", weight: 2 };
+                        },
+                        onEachFeature: function (feature, layer) {
+                            layer.on({
+                                mouseover: function () { layer.setStyle({ color: "#00ff00" }); },
+                                mouseout: function () { layer.setStyle({ color: "#ff7800" }); },
+                                click: function () {
+                                    const targetUrl = `location-details.html?location=${feature.properties.name}&coords=${encodeURIComponent(JSON.stringify(feature.geometry.coordinates))}`;
+                                    window.open(targetUrl, '_blank');
+                                }
+                            });
+                        }
+                    }).addTo(map);
+                })
+                .catch(error => console.error("Error loading GeoJSON:", error));
+        });
     </script>
+    
 </body>
 </html>

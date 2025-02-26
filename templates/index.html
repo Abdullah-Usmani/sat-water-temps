@@ -16,22 +16,19 @@
         // Initialize the map
         var map = L.map('map').setView([0, 0], 2);
 
-        // Add a base tile layer
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 18,
-            attribution: '© OpenStreetMap contributors'
+        // Add Esri Satellite Tile Layer
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri, Maxar, Earthstar Geographics, and the GIS User Community',
+            maxZoom: 19
         }).addTo(map);
 
-
-
-        // Fix featureIDs, fix paths 
-        // Add GeoJSON polygons (replace this with your actual GeoJSON data source)
+        // Load GeoJSON polygons (replace with your actual GeoJSON file path)
         fetch('/path/to/your/polygon-data.geojson')
             .then(response => response.json())
             .then(data => {
                 L.geoJSON(data, {
                     onEachFeature: function (feature, layer) {
-                        // Redirect to feature-specific map when polygon is clicked
+                        // Redirect to feature-specific page when polygon is clicked
                         layer.on('click', function () {
                             const featureId = feature.properties.name;
                             if (featureId) {
@@ -43,7 +40,7 @@
                     },
                     style: function (feature) {
                         return {
-                            color: 'blue',  // Customize color for polygons
+                            color: 'blue',  // Customize polygon color
                             weight: 2
                         };
                     }
