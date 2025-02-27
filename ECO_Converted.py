@@ -49,14 +49,14 @@ print("Setting Dates")
 today_date = datetime.now()
 today_date_str = today_date.strftime("%m-%d-%Y")
 # ed = today_date_str
-ed = "02-11-2025"
+ed = "02-04-2025"
 
 
 # Get Yesterday Date as Start Date
 yesterday_date = today_date - timedelta(days=1)
 yesterday_date_str = yesterday_date.strftime("%m-%d-%Y")
 # sd = yesterday_date_str
-sd = "02-05-2025"
+sd = "01-30-2025"
 # sd = "08-01-2023"
 
 # KEY RESULTS TO STORE/LOG
@@ -450,6 +450,7 @@ def log_updates():
 # Phase 1: Submit task in one go
 task_request = build_task_request(product, layers, roi_json, sd, ed)
 task_id = submit_task(headers, task_request)
+# task_id = "d0e5be4a-3747-46cb-9f63-ec24872ee799"
 print(f"Task ID: {task_id}")
 
 # # Phase 2: Create Directories and Mapping
@@ -465,7 +466,7 @@ for idx, row in roi.iterrows():
     # Map aid numbers to output folders
 #    aid_number = f'aid{str(idx + 1).zfill(4)}'  # Construct aid number
     aid_number = int(idx + 1)  # Construct aid number
-    aid_folder_mapping[aid_number] = (row['name'], row['location'])  # Map aid number to folder
+    aid_folder_mapping[int(aid_number)] = (row['name'], row['location'])  # Map aid number to folder
 
 # Phase 3: Check the status of the single task
 print("All tasks submitted!")
@@ -479,20 +480,8 @@ print("All tasks completed, results downloaded!")
 # Phase 4: Process the downloaded files
 process_all(new_files)
 
-# Phase 6: Log updates
-log_updates()
-
 # Phase 5: Cleanup old files
 # cleanup_old_files(raw_path, days_old=20)
 
-# def delete_files_with_short_date(folder_path):
-#     for root, _, files in os.walk(folder_path):
-#         for file in files:
-#             date_match = re.search(r'\d{7}', file)
-#             if date_match and not re.search(r'\d{13}', file):
-#                 file_path = os.path.join(root, file)
-#                 os.remove(file_path)
-#                 print(f"Deleted {file_path}")
-
-# # Example usage
-# delete_files_with_short_date(filtered_path)
+# Phase 6: Log updates
+log_updates()
