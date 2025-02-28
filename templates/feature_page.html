@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ feature_id }} Details</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            display: flex;
+            height: 100vh;
+            background-color: #121212;
+            color: #ffffff;
+            overflow: hidden;
+            opacity: 0;
+            transform: scale(0.9);
+            animation: fadeIn 0.5s forwards ease-out;
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        #map-container {
+            flex: 3;
+            position: relative;
+        }
+
+        #map {
+            width: 100%;
+            height: 100vh;
+            filter: brightness(90%);
+        }
+
+        #sidebar {
+            flex: 0.2;
+            background: rgba(30, 30, 30, 0.9);
+            padding: 50px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            backdrop-filter: blur(10px);
+            box-shadow: -4px 0 10px rgba(0, 0, 0, 0.3);
+            position: relative;
+            height: 100vh;
+            width: 100%;
+        }
+
+        h2, a {
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        a {
+            color: #f9a44a;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .info-box {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 100%;
+            max-width: 180px;
+        }
+
+        .box {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            font-size: 14px;
+            width: 100%;
+            transition: transform 0.2s, background 0.3s;
+        }
+
+        .box:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-3px);
+        }
+
+        #polygon-selector-container {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(30, 30, 30, 0.9);
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        #polygon-selector {
+            padding: 5px;
+            border-radius: 5px;
+            border: none;
+            background: #f9a44a;
+            color: #121212;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        #back-btn {
+                position: absolute;
+                top: 80px;
+                left: 20px;
+                background-color: #007BFF;
+                color: #fff;
+                padding: 25px 50px;
+                border: none;
+                border-radius: 10px;
+                cursor: pointer;
+                font-size: 20px;
+                font-weight: bold;
+                transition: background-color 0.3s;
+                z-index: 1000;
+            }
+    </style>
+</head>
+<body>
+    <div id="map-container">
+        <div id="map"></div>
+        <button id="back-btn" onclick="window.history.back();">Back</button>
+        <div class="footer">&copy; 2025 Water Temperature Monitoring Platform | All Rights Reserved</div>
+    </div>
+
+    <div id="polygon-selector-container">
+        <label for="polygon-selector">Select Polygon Date:</label>
+        <select id="polygon-selector"></select>
+    </div>
+
+    <div id="sidebar">
+        <h2>Temperature Data for <span id="location-name">{{ feature_id }}</span></h2>
+        <label for="date-selector" style="margin-bottom: 10px;">Select Date:</label>
+        <input type="date" id="date-selector" value="{{ latest_date }}" style="padding: 8px; width: 100%; border-radius: 5px;">
+        <div class="info-box" id="archive-box"><a href="/feature/{{ feature_id }}/archive">Archive</a></div>
+        <div class="info-box" id="temperature-boxes"></div>
+    </div>
+
+    <script>
+        document.getElementById('location-name').innerText = "{{ feature_id }}";
+        console.log("Feature ID:", "{{ feature_id }}");
+
+        const map = L.map('map', {
+            center: [2.5, 112.5],
+            zoom: 10,
+            minZoom: 10,
+            zoomControl: false
+        });
+
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+        const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri, Maxar, Earthstar Geographics, and the GIS User Community'
+        }).addTo(map);
+
+        const coords = JSON.parse('{{ coords|safe }}');
+        if (Array.isArray(coords) && Array.isArray(coords[0])) {
+            const latLngs = coords[0].map(coord => [coord[1], coord[0]]);
+            const polygon = L.polygon(latLngs, {
+                color: '#8abbff',
+                opacity: 0.05,
+                weight: 2,
+            }).addTo(map);
+            map.fitBounds(polygon.getBounds());
+            map.setMaxBounds(polygon.getBounds());
+
+            const overlay = L.imageOverlay("{{ url_for('get_latest_lst_tif', feature_id=feature_id) }}", polygon.getBounds()).addTo(map);
+
+            map.on('zoomend', function() {
+                polygon.setStyle({
+                    weight: 2 + map.getZoom() * 0.2,
+                    opacity: 0.05 + (map.getZoom() - 10) * 0.02
+                });
+            });
+        } else {
+            console.error("Invalid coordinates format:", coords);
+        }
+    
+        // Fetch and display temperature data
+        function fetchTemperatureData() {
+        fetch(`/feature/{{ feature_id }}/temperature`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    console.error(data.error);
+                    return;
+                }
+
+                const tableContainer = document.getElementById('temperature-boxes');
+                tableContainer.innerHTML = ""; // Clear previous data
+
+                // Create table element
+                const table = document.createElement('table');
+                table.style.width = '100%';
+                table.style.borderCollapse = 'collapse';
+
+                // Create table header
+                const headerRow = document.createElement('tr');
+                headerRow.innerHTML = `
+                    <th style="padding: 8px; border-bottom: 1px solid #fff;">Latitude</th>
+                    <th style="padding: 8px; border-bottom: 1px solid #fff;">Longitude</th>
+                    <th style="padding: 8px; border-bottom: 1px solid #fff;">Temperature (K)</th>
+                `;
+                table.appendChild(headerRow);
+
+                data.forEach(point => {
+                    const { x, y, LST_filter } = point;
+
+                    // Convert to Kelvin
+                    const tempKelvin = (parseFloat(LST_filter)).toFixed(2);
+
+                    const lat = parseFloat(y);
+                    const lng = parseFloat(x);
+
+                    if (isNaN(lat) || isNaN(lng) || isNaN(tempKelvin)) {
+                        console.warn("Invalid data point:", point);
+                        return;
+                    }
+
+                    // Add marker to the map
+                    L.circleMarker([lat, lng], {
+                        radius: 6,
+                        color: '#f9a44a',
+                        fillColor: '#f9a44a',
+                        fillOpacity: 0.8
+                    })
+                    .bindPopup(`<strong>Temp:</strong> ${tempKelvin} K`)
+                    .addTo(map);
+
+                    // Create table row
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td style="padding: 8px; border-bottom: 1px solid #fff;">${lat.toFixed(4)}</td>
+                        <td style="padding: 8px; border-bottom: 1px solid #fff;">${lng.toFixed(4)}</td>
+                        <td style="padding: 8px; border-bottom: 1px solid #fff;">${tempKelvin}</td>
+                    `;
+                    table.appendChild(row);
+                });
+
+                tableContainer.appendChild(table);
+            })
+            .catch(error => console.error("Error fetching temperature data:", error));
+    }
+
+        // Call the function to fetch and display data
+        fetchTemperatureData();
+
+        fetch('/feature/{{ feature_id }}/polygon_dates')
+            .then(response => response.json())
+            .then(dates => {
+                const selector = document.getElementById('polygon-selector');
+                dates.forEach(date => {
+                    const option = document.createElement('option');
+                    option.value = date;
+                    option.textContent = date;
+                    selector.appendChild(option);
+                });
+                selector.addEventListener('change', function() {
+                    fetchPolygonData(this.value);
+                });
+            });
+
+        function fetchPolygonData(date) {
+            fetch(`/feature/{{ feature_id }}/polygon?date=${date}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        console.error(data.error);
+                        return;
+                    }
+
+                    const coords = JSON.parse(data.coords);
+                    const latLngs = coords[0].map(coord => [coord[1], coord[0]]);
+                    L.polygon(latLngs, { color: '#8abbff', weight: 2 }).addTo(map);
+                })
+                .catch(error => console.error("Error fetching polygon data:", error));
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ feature_id }} Archive</title>
+    
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #121212;
+            color: #fff;
+            text-align: center;
+        }
+        header {
+            background: linear-gradient(135deg, #0b3d91, #48c6ef);
+            padding: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .container {
+            width: 90%;
+            margin: auto;
+            padding: 20px;
+        }
+        .layer-controls {
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #1e1e1e;
+            border-radius: 10px;
+            display: inline-block;
+        }
+        .layer-controls label {
+            margin-right: 10px;
+            font-weight: 600;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            padding-top: 10px;
+        }
+        .grid-item {
+            background: #1e1e1e;
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease;
+        }
+        .grid-item:hover {
+            transform: scale(1.05);
+        }
+        img {
+            width: 100%;
+            border-radius: 5px;
+        }
+        .caption {
+            margin-top: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            color: #ddd;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+        .download-link {
+            display: block;
+            margin-top: 5px;
+            font-size: 14px;
+            color: #48c6ef;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .download-link:hover {
+            text-decoration: underline;
+        }
+        
+        #back-btn {
+            position: absolute;
+            top: 80px;
+            left: 20px;
+            background-color: #007BFF;
+            color: #fff;
+            padding: 25px 50px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 20px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+            z-index: 1000;
+        }
+
+        #back-btn:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        {{ feature_id }} Archive
+    </header>
+    
+    <button id="back-btn" onclick="window.history.back();">Back</button>
+    <div class="container">
+        <div class="layer-controls">
+            <label><input type="checkbox" id="LST" checked> LST</label>
+            <label><input type="checkbox" id="EmisWB"> EmisWB</label>
+            <label><input type="checkbox" id="height"> Height</label>
+            <label><input type="checkbox" id="cloud"> Cloud</label>
+            <label><input type="checkbox" id="water"> Water</label>
+            <label><input type="checkbox" id="QC"> QC</label>
+            <label><input type="checkbox" id="LST_err"> LST_err</label>
+        </div>
+        
+        <div class="grid-container" id="imageGrid">
+            {% for filename in tif_files %}
+                <div class="grid-item" data-layer="{{ filename | extract_layer }}">
+                    <img src="{{ url_for('serve_tif_as_png', feature_id=feature_id, filename=filename) }}" alt="{{ feature_id }} for {{ filename }}">
+                    <div class="caption" title="{{ filename }}">{{ filename }}</div>
+                    <a href="{{ url_for('download_tif', feature_id=feature_id, filename=filename) }}" class="download-link">Download Original</a>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <script>
+        function updateLayers() {
+            let selectedLayers = [];
+            document.querySelectorAll('.layer-controls input:checked').forEach(checkbox => {
+                selectedLayers.push(checkbox.id);
+            });
+
+            document.querySelectorAll('.grid-item').forEach(item => {
+                let layer = item.getAttribute('data-layer');
+                item.style.display = selectedLayers.includes(layer) ? "block" : "block";
+            });
+        }
+
+        document.querySelectorAll('.layer-controls input').forEach(input => {
+            input.addEventListener('change', updateLayers);
+        });
+
+        updateLayers();
+    </script>
+</body>
+</html>
