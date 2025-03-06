@@ -79,6 +79,26 @@
         .download-link:hover {
             text-decoration: underline;
         }
+        
+        #back-btn {
+            position: absolute;
+            top: 80px;
+            left: 20px;
+            background-color: #007BFF;
+            color: #fff;
+            padding: 25px 50px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 20px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+            z-index: 1000;
+        }
+
+        #back-btn:hover {
+            background-color: #0056b3;
+        }
     </style>
 </head>
 <body>
@@ -86,6 +106,7 @@
         {{ feature_id }} Archive
     </header>
     
+    <button id="back-btn" onclick="window.history.back();">Back</button>
     <div class="container">
         <div class="layer-controls">
             <label><input type="checkbox" id="LST" checked> LST</label>

@@ -1,11 +1,11 @@
-from flask import Flask, json, request, jsonify, send_file, render_template, abort
+from flask import Flask, json, jsonify, send_file, render_template, abort
 import os
 import io
 import re
-from matplotlib import pyplot as plt
+import pandas as pd
 import numpy as np
 import rasterio
-from rasterio.plot import reshape_as_image
+import matplotlib.pyplot as plt
 from PIL import Image
 
 app = Flask(__name__)
@@ -57,7 +57,6 @@ def feature_archive(feature_id):
     tif_files = [f for f in os.listdir(data_folder) if f.endswith('.tif')]
     
     return render_template('feature_archive.html', feature_id=feature_id, tif_files=tif_files)
-
 GLOBAL_MIN = 273  # Kelvin
 GLOBAL_MAX = 308  # Kelvin
 
@@ -177,6 +176,28 @@ def normalize(data):
 
     return norm_data, alpha_mask
 
+@app.route('/feature/<feature_id>/temperature')
+def get_temperature(feature_id):
+    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
+    csv_files = [os.path.join(data_folder, file) for file in os.listdir(data_folder) if file.endswith('.csv')]
+
+    if not csv_files:
+        return jsonify({"error": "No CSV files found"}), 404
+
+    csv_files.sort(key=os.path.getmtime, reverse=True)
+    csv_path = csv_files[0]
+    
+    df = pd.read_csv(csv_path)
+    if not {'x', 'y', 'LST_filter'}.issubset(df.columns):
+        return jsonify({"error": "CSV file missing required columns"}), 400
+
+    temp_data = df[['x', 'y', 'LST_filter']].dropna()
+    
+    if temp_data.empty:
+        return jsonify({"error": "No data found"}), 404
+    
+    return temp_data.to_json(orient='records')
+
 # This thing creates a .png for the .tif file
 def multi_tif_to_png(tif_path):
     """Converts a multi-band .tif to a .png with transparency for missing data."""
@@ -250,7 +271,7 @@ def multi_tif_to_png(tif_path):
         img_bytes.seek(0)
 
     return img_bytes
-    
+  
 @app.route('/serve_tif_as_png/<feature_id>/<filename>')
 def serve_tif_as_png(feature_id, filename):
     data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
