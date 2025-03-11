@@ -7,7 +7,7 @@ import geopandas as gpd
 output_dir = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\sat-water-temps\static"
 shapefile_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/polygon/new_polygons.shp"
 
-output_path = os.path.join(output_dir, 'polygons_new.geojson')
+output_path = os.path.join(output_dir, 'polygons.geojson')
 gdf = gpd.read_file(shapefile_path)
 
 # Convert to GeoJSON format

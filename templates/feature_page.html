@@ -46,19 +46,21 @@
         }
 
         #sidebar {
-            flex: 0.2;
-            background: rgba(30, 30, 30, 0.9);
-            padding: 50px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            backdrop-filter: blur(10px);
-            box-shadow: -4px 0 10px rgba(0, 0, 0, 0.3);
-            position: relative;
-            height: 100vh;
-            width: 100%;
-        }
+    position: fixed; /* Locks it in place */
+    top: 0;
+    right: 0;
+    width: 350px; /* Set a fixed width */
+    height: 100vh; /* Full height */
+    background: rgba(30, 30, 30, 0.9);
+    padding: 15px;
+    overflow-y: auto; /* Scroll inside if content overflows */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    backdrop-filter: blur(10px);
+    box-shadow: -4px 0 10px rgba(0, 0, 0, 0.3);
+    z-index: 1000; /* Ensures it stays above other elements */
+}
 
         h2, a {
             text-align: center;
@@ -133,6 +135,19 @@
                 transition: background-color 0.3s;
                 z-index: 1000;
             }
+            #temperature-boxes table {
+    width: 100%;
+    color: white; /* Ensure text is visible */
+    background-color: rgba(0, 0, 0, 0.6); /* Light background for visibility */
+    border-collapse: collapse;
+}
+
+#temperature-boxes th, #temperature-boxes td {
+    padding: 8px;
+    border-bottom: 1px solid #fff;
+}
+
+            
     </style>
 </head>
 <body>
@@ -149,12 +164,25 @@
 
     <div id="sidebar">
         <h2>Temperature Data for <span id="location-name">{{ feature_id }}</span></h2>
-        <label for="date-selector" style="margin-bottom: 10px;">Select Date:</label>
-        <input type="date" id="date-selector" value="{{ latest_date }}" style="padding: 8px; width: 100%; border-radius: 5px;">
-        <div class="info-box" id="archive-box"><a href="/feature/{{ feature_id }}/archive">Archive</a></div>
-        <div class="info-box" id="temperature-boxes"></div>
+    
+        <div class="date-container">
+            <label for="date-selector">Select Date:</label>
+            <input type="date" id="date-selector" value="{{ latest_date }}">
+        </div>
+    
+        <!-- Data Table First -->
+        <div id="temperature-boxes"></div>
+    
+        <!-- Graph Below -->
+        <canvas id="temperatureChart"></canvas>
+    
+        <div class="info-box" id="archive-box">
+            <a href="/feature/{{ feature_id }}/archive">Archive</a>
+        </div>
     </div>
-
+    
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         document.getElementById('location-name').innerText = "{{ feature_id }}";
         console.log("Feature ID:", "{{ feature_id }}");
@@ -196,104 +224,165 @@
         }
     
         // Fetch and display temperature data
-        function fetchTemperatureData() {
-        fetch(`/feature/{{ feature_id }}/temperature`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    console.error(data.error);
-                    return;
-                }
+     
 
-                const tableContainer = document.getElementById('temperature-boxes');
-                tableContainer.innerHTML = ""; // Clear previous data
-
-                // Create table element
-                const table = document.createElement('table');
-                table.style.width = '100%';
-                table.style.borderCollapse = 'collapse';
-
-                // Create table header
-                const headerRow = document.createElement('tr');
-                headerRow.innerHTML = `
-                    <th style="padding: 8px; border-bottom: 1px solid #fff;">Latitude</th>
-                    <th style="padding: 8px; border-bottom: 1px solid #fff;">Longitude</th>
-                    <th style="padding: 8px; border-bottom: 1px solid #fff;">Temperature (K)</th>
-                `;
-                table.appendChild(headerRow);
-
-                data.forEach(point => {
-                    const { x, y, LST_filter } = point;
-
-                    // Convert to Kelvin
-                    const tempKelvin = (parseFloat(LST_filter)).toFixed(2);
-
-                    const lat = parseFloat(y);
-                    const lng = parseFloat(x);
-
-                    if (isNaN(lat) || isNaN(lng) || isNaN(tempKelvin)) {
-                        console.warn("Invalid data point:", point);
-                        return;
-                    }
-
-                    // Add marker to the map
-                    L.circleMarker([lat, lng], {
-                        radius: 6,
-                        color: '#f9a44a',
-                        fillColor: '#f9a44a',
-                        fillOpacity: 0.8
-                    })
-                    .bindPopup(`<strong>Temp:</strong> ${tempKelvin} K`)
-                    .addTo(map);
-
-                    // Create table row
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td style="padding: 8px; border-bottom: 1px solid #fff;">${lat.toFixed(4)}</td>
-                        <td style="padding: 8px; border-bottom: 1px solid #fff;">${lng.toFixed(4)}</td>
-                        <td style="padding: 8px; border-bottom: 1px solid #fff;">${tempKelvin}</td>
-                    `;
-                    table.appendChild(row);
-                });
-
-                tableContainer.appendChild(table);
-            })
-            .catch(error => console.error("Error fetching temperature data:", error));
-    }
+// Ensure function runs after DOM is fully loaded
+document.addEventListener("DOMContentLoaded", fetchTemperatureData);
 
         // Call the function to fetch and display data
-        fetchTemperatureData();
+        async function fetchTemperatureData() {
+        try {
+            const response = await fetch(`/feature/{{ feature_id }}/temperature`);
+            const data = await response.json();
+            if (data.error) throw new Error(data.error);
 
-        fetch('/feature/{{ feature_id }}/polygon_dates')
-            .then(response => response.json())
-            .then(dates => {
-                const selector = document.getElementById('polygon-selector');
-                dates.forEach(date => {
-                    const option = document.createElement('option');
-                    option.value = date;
-                    option.textContent = date;
-                    selector.appendChild(option);
-                });
-                selector.addEventListener('change', function() {
-                    fetchPolygonData(this.value);
-                });
+            const tableContainer = document.getElementById('temperature-boxes');
+            tableContainer.innerHTML = "";
+
+            // Create table structure
+            const table = document.createElement('table');
+            table.innerHTML = `
+                <thead>
+                    <tr>
+                        <th>Latitude</th>
+                        <th>Longitude</th>
+                        <th>Temp (K)</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            `;
+            
+            const tbody = table.querySelector("tbody");
+
+            // Populate Table Rows
+            data.forEach(point => {
+                const { x, y, LST_filter } = point;
+                const tempKelvin = parseFloat(LST_filter).toFixed(2);
+                const lat = parseFloat(y).toFixed(4);
+                const lng = parseFloat(x).toFixed(4);
+
+                if (!isNaN(lat) && !isNaN(lng) && !isNaN(tempKelvin)) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${lat}</td>
+                        <td>${lng}</td>
+                        <td>${tempKelvin}</td>
+                    `;
+                    tbody.appendChild(row);
+                }
             });
 
-        function fetchPolygonData(date) {
-            fetch(`/feature/{{ feature_id }}/polygon?date=${date}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.error) {
-                        console.error(data.error);
-                        return;
-                    }
-
-                    const coords = JSON.parse(data.coords);
-                    const latLngs = coords[0].map(coord => [coord[1], coord[0]]);
-                    L.polygon(latLngs, { color: '#8abbff', weight: 2 }).addTo(map);
-                })
-                .catch(error => console.error("Error fetching polygon data:", error));
+            tableContainer.appendChild(table);
+        } catch (error) {
+            console.error("Error fetching temperature data:", error);
         }
+    }
+
+    fetchTemperatureData();
     </script>
+
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    async function fetchTemperatureData() {
+        try {
+            const response = await fetch(`/feature/{{ feature_id }}/temperature`);
+            const data = await response.json();
+            if (data.error) throw new Error(data.error);
+
+            const tableContainer = document.getElementById('temperature-boxes');
+            tableContainer.innerHTML = "";
+
+            // Create table structure
+            const table = document.createElement('table');
+            table.innerHTML = `
+                <thead>
+                    <tr>
+                        <th>Latitude</th>
+                        <th>Longitude</th>
+                        <th>Temp (K)</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            `;
+            
+            const tbody = table.querySelector("tbody");
+
+            // Data for the graph
+            const labels = [];
+            const temperatures = [];
+
+            data.forEach(point => {
+                const { x, y, LST_filter } = point;
+                const tempKelvin = parseFloat(LST_filter).toFixed(2);
+                const lat = parseFloat(y).toFixed(4);
+                const lng = parseFloat(x).toFixed(4);
+
+                if (!isNaN(lat) && !isNaN(lng) && !isNaN(tempKelvin)) {
+                    // Populate Table
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${lat}</td>
+                        <td>${lng}</td>
+                        <td>${tempKelvin}</td>
+                    `;
+                    tbody.appendChild(row);
+
+                    // Add data to the graph
+                    labels.push(`(${lat}, ${lng})`);
+                    temperatures.push(tempKelvin);
+                }
+            });
+
+            tableContainer.appendChild(table);
+
+            // Display the graph
+            renderTemperatureGraph(labels, temperatures);
+        } catch (error) {
+            console.error("Error fetching temperature data:", error);
+        }
+    }
+
+    function renderTemperatureGraph(labels, temperatures) {
+        const ctx = document.getElementById('temperatureChart').getContext('2d');
+
+        // Destroy previous chart instance if it exists
+        if (window.tempChart) {
+            window.tempChart.destroy();
+        }
+
+        window.tempChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Temperature (K)',
+                    data: temperatures,
+                    borderColor: '#ff7f0e',
+                    backgroundColor: 'rgba(255, 127, 14, 0.2)',
+                    borderWidth: 2,
+                    pointRadius: 4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        title: { display: true, text: 'Location' }
+                    },
+                    y: {
+                        title: { display: true, text: 'Temperature (K)' },
+                        beginAtZero: false
+                    }
+                }
+            }
+        });
+    }
+
+    fetchTemperatureData();
+</script>
+
 </body>
 </html>
