@@ -22,9 +22,9 @@
             background-color: #121212;
             color: #ffffff;
             overflow: hidden;
-            opacity: 0;
+            /* opacity: 0;
             transform: scale(0.9);
-            animation: fadeIn 0.5s forwards ease-out;
+            animation: fadeIn 0.5s forwards ease-out; */
         }
 
         @keyframes fadeIn {
@@ -100,8 +100,8 @@
         #polygon-selector-container {
             position: absolute;
             top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
+            left: 40%;
+            transform: translateX(-60%);
             background: rgba(30, 30, 30, 0.9);
             padding: 10px;
             border-radius: 8px;
@@ -117,10 +117,31 @@
             font-weight: bold;
             cursor: pointer;
         }
+
+        #color-selector-container {
+            position: absolute;
+            top: 20px;
+            left: 60%;
+            transform: translateX(-40%);
+            background: rgba(30, 30, 30, 0.9);
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        #color-selector {
+            padding: 5px;
+            border-radius: 5px;
+            border: none;
+            background: #ffdebb;
+            color: #121212;
+            font-weight: bold;
+            cursor: pointer;
+        }
         
         #back-btn {
                 position: absolute;
-                top: 80px;
+                top: 20px;
                 left: 20px;
                 background-color: #007BFF;
                 color: #fff;
@@ -145,6 +166,11 @@
     <div id="polygon-selector-container">
         <label for="polygon-selector">Select Polygon Date:</label>
         <select id="polygon-selector"></select>
+    </div>
+
+    <div id="color-selector-container">
+        <label for="color-selector">Color Scale:</label>
+        <select id="color-selector"></select>
     </div>
 
     <div id="sidebar">
@@ -173,6 +199,8 @@
         }).addTo(map);
 
         const coords = JSON.parse('{{ coords|safe }}');
+        let overlay = null; // Store reference to overlay for later removal
+    
         if (Array.isArray(coords) && Array.isArray(coords[0])) {
             const latLngs = coords[0].map(coord => [coord[1], coord[0]]);
             const polygon = L.polygon(latLngs, {
@@ -183,7 +211,8 @@
             map.fitBounds(polygon.getBounds());
             map.setMaxBounds(polygon.getBounds());
 
-            const overlay = L.imageOverlay("{{ url_for('get_latest_lst_tif', feature_id=feature_id) }}", polygon.getBounds()).addTo(map);
+            // Initial overlay
+            overlay = L.imageOverlay("{{ url_for('get_latest_lst_tif', feature_id=feature_id) }}", polygon.getBounds()).addTo(map);
 
             map.on('zoomend', function() {
                 polygon.setStyle({
@@ -191,10 +220,37 @@
                     opacity: 0.05 + (map.getZoom() - 10) * 0.02
                 });
             });
-        } else {
-            console.error("Invalid coordinates format:", coords);
+                // Fetch available dates and update overlay on change
+                fetch('/feature/{{ feature_id }}/tif_dates')
+                    .then(response => response.json())
+                    .then(dates => {
+                        const selector = document.getElementById('polygon-selector');
+                        dates.forEach(date => {
+                            const option = document.createElement('option');
+                            option.value = date;
+                            option.textContent = date;
+                            selector.appendChild(option);
+                        });
+
+
+
+
+                        selector.addEventListener('change', function() {
+                            const newOverlayUrl = `/feature/{{ feature_id }}/doy/${this.value}`;
+
+                            // Remove existing overlay if present
+                            if (overlay) {
+                                map.removeLayer(overlay);
+                            }
+
+                            // Add new overlay and update reference
+                            overlay = L.imageOverlay(newOverlayUrl, polygon.getBounds()).addTo(map);
+                        });
+                    });
+            } else {
+                console.error("Invalid coordinates format:", coords);
         }
-    
+        
         // Fetch and display temperature data
         function fetchTemperatureData() {
         fetch(`/feature/{{ feature_id }}/temperature`)
@@ -259,41 +315,8 @@
                 tableContainer.appendChild(table);
             })
             .catch(error => console.error("Error fetching temperature data:", error));
-    }
-
-        // Call the function to fetch and display data
-        fetchTemperatureData();
-
-        fetch('/feature/{{ feature_id }}/polygon_dates')
-            .then(response => response.json())
-            .then(dates => {
-                const selector = document.getElementById('polygon-selector');
-                dates.forEach(date => {
-                    const option = document.createElement('option');
-                    option.value = date;
-                    option.textContent = date;
-                    selector.appendChild(option);
-                });
-                selector.addEventListener('change', function() {
-                    fetchPolygonData(this.value);
-                });
-            });
-
-        function fetchPolygonData(date) {
-            fetch(`/feature/{{ feature_id }}/polygon?date=${date}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.error) {
-                        console.error(data.error);
-                        return;
-                    }
-
-                    const coords = JSON.parse(data.coords);
-                    const latLngs = coords[0].map(coord => [coord[1], coord[0]]);
-                    L.polygon(latLngs, { color: '#8abbff', weight: 2 }).addTo(map);
-                })
-                .catch(error => console.error("Error fetching polygon data:", error));
         }
+        fetchTemperatureData();
     </script>
 </body>
 </html>

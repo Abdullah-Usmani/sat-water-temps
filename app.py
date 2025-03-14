@@ -7,6 +7,7 @@ import numpy as np
 import rasterio
 import matplotlib.pyplot as plt
 from PIL import Image
+# from ECO_Converted import extract_metadata 
 
 app = Flask(__name__)
 
@@ -25,7 +26,6 @@ def extract_layer(filename):
 
 # Register it as a Jinja filter
 app.jinja_env.filters['extract_layer'] = extract_layer
-
 
 @app.route('/feature/<feature_id>')
 def feature_page(feature_id):
@@ -283,6 +283,53 @@ def serve_tif_as_png(feature_id, filename):
     img_bytes = convert_tif_to_png(tif_path)
     return send_file(img_bytes, mimetype='image/png')
 
+# get all DOYs from the folder
+# show DOYs in selector
+# when DOY is selected, show the image for that DOY
+
+# Function to extract aid number and date from filename
+def extract_metadata(filename):
+    aid_match = re.search(r'aid(\d{4})', filename)
+    date_match = re.search(r'lake_(\d{13})', filename)
+
+    aid_number = int(aid_match.group(1)) if aid_match else None
+    date = date_match.group(1) if date_match else None
+
+    return aid_number, date
+
+def get_updated_folders(new_files):
+    return [extract_metadata(f)[0] for f in new_files if extract_metadata(f)[0]]
+
+# Function to filter only new files and return unique dates
+def get_updated_dates(new_files):
+    return [extract_metadata(f)[1] for f in new_files if extract_metadata(f)[1]]
+
+@app.route('/feature/<feature_id>/tif_dates')
+def get_doys(feature_id):
+    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
+    if not os.path.isdir(data_folder):
+        abort(404)
+
+    tif_files = [f for f in os.listdir(data_folder) if f.endswith('.tif')]
+    doys = get_updated_dates(tif_files)  # Assuming extract_metadata returns a dictionary with 'DOY'
+    # list(doys)
+    print(doys)
+    return jsonify(sorted(doys))
+
+@app.route('/feature/<feature_id>/doy/<doy>')
+def get_tif_by_doy(feature_id, doy):
+    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
+    tif_files = [f for f in os.listdir(data_folder) if f.endswith('.tif')]
+
+    for tif_file in tif_files:
+        metadata = extract_metadata(tif_file)
+        if metadata[1] == doy:
+            tif_path = os.path.join(data_folder, tif_file)
+            img_bytes = convert_tif_to_png(tif_path)
+            return send_file(img_bytes, mimetype='image/png')
+
+    abort(404)  # No matching DOY found
+
 @app.route('/latest_lst_tif/<feature_id>/')  # Add route for serving .png files
 def get_latest_lst_tif(feature_id):
     """Finds and returns the latest .tif file in the specified folder."""
@@ -298,6 +345,23 @@ def get_latest_lst_tif(feature_id):
         return send_file(img_bytes, mimetype='image/png')
     
     return None  # Return None if no .tif file is found
+
+
+# @app.route('/latest_lst_tif/<feature_id>/')  # Add route for serving .png files
+# def get_tif_by_date(feature_id, doy):
+#     """Finds and returns the latest .tif file in the specified folder."""
+
+#     data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
+
+#     filtered_files = [os.path.join(data_folder, file) for file in os.listdir(data_folder) if file.endswith('.tif')]
+
+#     # Sort by modification time (newest first)
+#     if filtered_files:
+#         filtered_files.sort(key=os.path.getmtime, reverse=True)
+#         img_bytes = multi_tif_to_png(filtered_files[0])
+#         return send_file(img_bytes, mimetype='image/png')
+    
+#     return None  # Return None if no .tif file is found
 
 @app.route('/download_tif/<feature_id>/<filename>')
 def download_tif(feature_id, filename):

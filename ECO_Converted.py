@@ -448,9 +448,9 @@ def log_updates():
     print(f"Updates saved to {full_path}.")
 
 # Phase 1: Submit task in one go
-task_request = build_task_request(product, layers, roi_json, sd, ed)
-task_id = submit_task(headers, task_request)
-# task_id = "d0e5be4a-3747-46cb-9f63-ec24872ee799"
+# task_request = build_task_request(product, layers, roi_json, sd, ed)
+# task_id = submit_task(headers, task_request)
+task_id = "3dd9c96f-d1dd-4e94-a79e-19708db263e2"
 print(f"Task ID: {task_id}")
 
 # # Phase 2: Create Directories and Mapping

@@ -1,7 +1,37 @@
-pycache/
+# Python cache files
+__pycache__/
+
+# Frontend/Backend dependencies
+node_modules/
+
+# Firebase-related files
+
+.firebase/
+.firebaserc
+.firestore/
+serviceAccountKey.json
+firebase.json
+package-lock.json
+package.json
+
+
+# Environment variables
+.env
+.env.local
+.env.production
+.env.*
+
+# Static & test data
 static/
 test_data/
-index.html
+src/
+public/
+functions/
+
+# Firebase rules (optional, if you don’t want them versioned)
+database.rules.json
+storage.rules
+
+# Workspace & project-specific files
 GAM4water_0.0.4.R
-README.md
 sat-water-temps.code-workspace
