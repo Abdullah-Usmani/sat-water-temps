@@ -1,4 +1,5 @@
 import os
+import subprocess
 import time
 import requests
 import geopandas as gpd
@@ -7,39 +8,38 @@ import json
 import re
 from rasterio.merge import merge
 import numpy as np
+import shutil
 import pandas as pd
 from datetime import datetime, timedelta
-from azure.storage.blob import BlobServiceClient
 import mysql.connector
 from mysql.connector import Error
+import firebase_admin
+from firebase_admin import credentials, storage
 
 # Directory paths
 print("Setting Directory Paths")
-pt = "C:/Users/jepht/OneDrive/Desktop/Water Temp Sensors_Jephtha/ECOraw/"
-output_path = "C:/Users/jepht/OneDrive/Desktop/Water Temp Sensors_Jephtha/ECO/"
-roi_path = "C:/Users/jepht/OneDrive/Desktop/Water Temp Sensors_Jephtha/polygon/test/site_full_ext_Test.shp"
+
+roi_test_path = r"D:/Coding/SEGP/Water Temp Sensors_Jephtha/polygon/test/site_full_ext_Test.shp"
+raw_path = r"D:/Coding/SEGP/Water Temp Sensors_Jephtha/ECOraw/"
+filtered_path = r"D:/Coding/SEGP/Water Temp Sensors_Jephtha/ECO/"
+roi_path = r"D:/Coding/SEGP/Water Temp Sensors_Jephtha/polygon/new_polygons.shp"
+log_path = r"D:/Coding/SEGP/Water Temp Sensors_Jephtha/logs/"
+R_path = r"D:/Coding/SEGP/Water Temp Sensors_Jephtha/GAM4water_0.0.4.R"
+
+#Verify File Paths
+if not os.path.exists(roi_test_path):
+    raise FileNotFoundError(f"The ROI shapefile does not exist at {roi_test_path}")
+
+try:
+    roi = gpd.read_file(roi_test_path)
+except Exception as e:
+    raise ValueError(f"Could not read the shapefile: {e}")
 
 # Database Credentials
 MYSQL_HOST = "localhost"
 MYSQL_USER = "Jephtha_T"
 MYSQL_PASSWORD = "1#Big_Chilli"
 MYSQL_DATABASE = "ecodata"
-
-# Azure Blob Storage credentials
-CONNECTION_STRING = "DefaultEndpointsProtocol=https;AccountName=ecodatasat;AccountKey=y4YZhr/kS10qLPGhXff3rrcydXD960w5yrxPsaWdGlcZkOACDm+YJyS79YCCkwFTdAWu/PrdC4y7+AStXFsUrA==;EndpointSuffix=core.windows.net"  # From Azure Portal
-CONTAINER_NAME = "ecostress-data"  # Name of your container
-
-# Define Earthdata login credentials (Replace with your actual credentials)
-user = 'JephthaT'
-password = '1#Big_Chilli'
-
-if not os.path.exists(roi_path):
-    raise FileNotFoundError(f"The ROI shapefile does not exist at {roi_path}")
-
-try:
-    roi = gpd.read_file(roi_path)
-except Exception as e:
-    raise ValueError(f"Could not read the shapefile: {e}")
 
 # Function to Create Database Connection
 def create_db_connection():
@@ -54,6 +54,49 @@ def create_db_connection():
     except Error as e:
         print(f"Error connecting to MySQL: {e}")
         return None
+
+# Database Credentials
+firebase_path = r"/ECOStress-Data-Download-1-firebase-adminsdk-1zv3o-7b3b7b7b7b.json"
+firebase_bucket = "eco-stress-1.appspot.com"
+
+# # Initialize Firebase
+# cred = credentials.Certificate(firebase_path)  # Firebase JSON Key
+# firebase_admin.initialize_app(cred, {'storageBucket': firebase_bucket})
+
+# def upload_to_firebase(local_path, remote_path):
+#     # Uploads a file to Firebase Storage and returns its download URL.
+#     bucket = storage.bucket()
+#     blob = bucket.blob(remote_path)
+#     blob.upload_from_filename(local_path)
+#     return blob.public_url
+
+# Define Earthdata login credentials (Replace with your actual credentials)
+user = 'JephthaT'
+password = '1#Big_Chilli'
+
+# Generate a timestamp for this run (format: YYYYMMDD_HHMM) for uniqueness in filenames
+timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+
+# Get Today Date As End Date
+print("Setting Dates")
+today_date = datetime.now()
+today_date_str = today_date.strftime("%m-%d-%Y")
+# ed = today_date_str
+ed = "01-31-2025"
+
+# Get Yesterday Date as Start Date
+yesterday_date = today_date - timedelta(days=1)
+yesterday_date_str = yesterday_date.strftime("%m-%d-%Y")
+# sd = yesterday_date_str
+sd = "01-26-2025"
+
+# KEY RESULTS TO STORE/LOG
+updated_aids = set()
+new_files = []
+new_dates = []
+aid_folder_mapping = {}
+# Invalid QC values
+INVALID_QC_VALUES = {15, 2501, 3525, 65535}
 
 # Get token (API login via r)
 def get_token(user, password):
@@ -70,32 +113,48 @@ def get_token(user, password):
 token = get_token(user, password)
 print(token)
 
-# Get Today Date As End Date
-print("Setting Dates")
-today_date = datetime.now()
-today_date_str = today_date.strftime("%m-%d-%Y")
-ed = today_date_str
-# ed = "10-01-2024"
-
-# Get Yesterday Date as Start Date
-yesterday_date = today_date - timedelta(days=1)
-yesterday_date_str = yesterday_date.strftime("%m-%d-%Y")
-# sd = yesterday_date_str
-sd = "11-01-2024"
-
 # Products, Headers and layers
 product = "ECO_L2T_LSTE.002"
 headers = {
     'Authorization': f'Bearer {token}'
 }
-layers = ["LST", "LST_err"]
+layers = ["LST", "LST_err", "QC", "water", "cloud", "EmisWB", "height"]
 
 # Load the area of interest (ROI)
 print("Loading Regions of Interest")
-roi = gpd.read_file(roi_path)
+roi = gpd.read_file(roi_test_path)
 roi_json = roi.__geo_interface__  # Convert ROI to GeoJSON
 
+def classify_wetted_area(input_tiff, output_dir, crs):
+    # Calls the R script GAM4water_0.0.4.R to classify wetted/non-wetted pixels.
+    wetted_tiff = os.path.join(output_dir, "wetted_raster01.tiff")  # Expected output path from GAM4water
+    ref_crs = crs.to_string() if crs else None
+    try:
+        subprocess.run([
+            "Rscript", R_path,
+            input_tiff, output_dir, ref_crs if ref_crs else "NULL"],
+            check=True)
 
+        if not os.path.exists(wetted_tiff):
+            print(f"Error: Wetted raster {wetted_tiff} not found!")
+            return None
+
+        # Read the wetted raster into memory
+        with rasterio.open(wetted_tiff) as wetted_ds:
+            wetted_array = wetted_ds.read(1)
+
+        # Delete the wetted raster file to avoid clutter
+        os.remove(wetted_tiff)
+        print(f"Deleted intermediate file: {wetted_tiff}")
+
+        return wetted_array
+
+    except subprocess.CalledProcessError as e:
+        print(f"Error running GAM4water: {e}")
+        return None
+
+
+# Function to build the task request
 def build_task_request(product, layers, roi_json, sd, ed):
     # Prepare the request payload
     task = {
@@ -104,7 +163,7 @@ def build_task_request(product, layers, roi_json, sd, ed):
         "params": {
             "dates": [{"startDate": sd, "endDate": ed}],
             "layers": [{"product": product, "layer": layer} for layer in layers],
-            "geo": roi_json,  # Use the properly formatted roi
+            "geo": roi_json,  # Use the GeoJSON formatted roi
             "output": {
                 "format": {"type": "geotiff"},
                 "projection": "geographic"
@@ -142,6 +201,9 @@ def check_task_status(task_id, headers):
         elif status == "queued":
             print(f"Task {task_id} is still queued. Checking again in 30 seconds...")
             time.sleep(30)
+        elif status == "pending":
+            print(f"Task {task_id} is still pending. Checking again in 30 seconds...")
+            time.sleep(30)
         else:
             raise Exception(f"Task failed with status: {status}")
     return doneFlag
@@ -151,9 +213,6 @@ def download_results(task_id, headers):
     url = f"https://appeears.earthdatacloud.nasa.gov/api/bundle/{task_id}"
     response = requests.get(url, headers=headers)
     files = response.json()['files']
-    
-    # Dictionary to group files by aid folder
-    aid_files = {}
 
     # Step 1: Download files and group by aid
     for file in files:
@@ -162,8 +221,13 @@ def download_results(task_id, headers):
         aid_match = re.search(r'aid(\d{4})', file_name)  # Extract aid number from filename
 
         if aid_match:
-            aid_number = aid_match.group(0)  # Get the full aid number string (e.g., "aid0001")
-            output_folder = aid_folder_mapping.get(aid_number)  # Get corresponding output folder
+            aid_number = extract_metadata(file_name)[0]
+            updated_aids.add(aid_number)  # Track updated aids
+            name, location = aid_folder_mapping.get(aid_number, (None, None))
+            if name is None or location is None:
+                print(f"No mapping found for AID: {aid_number}, skipping...")
+                continue
+            output_folder = os.path.join(raw_path, name, location)
 
             if output_folder is not None:
                 # Ensure output folder exists and strip preceding folder in file_name if present
@@ -171,37 +235,31 @@ def download_results(task_id, headers):
                 file_name_stripped = file_name.split('/')[-1]
                 local_filename = os.path.join(output_folder, file_name_stripped)
 
-                print(f"Downloading to: {local_filename}")
+                # print(f"Downloading to: {local_filename}")
                 download_url = f"{url}/{file_id}"
                 download_response = requests.get(download_url, headers=headers, stream=True, allow_redirects=True)
 
-                # Save the file locally temporarily
+                # Save the file locally and add it to the new_files list
                 with open(local_filename, 'wb') as f:
                     for chunk in download_response.iter_content(chunk_size=8192):
                         f.write(chunk)
-
+                new_files.append(local_filename)  # Track newly downloaded file
                 print(f"Downloaded {local_filename}")
 
-                processed_file = process_rasters(local_filename)
+                # Upload to Firebase
+                # firebase_link = upload_to_firebase(output_folder, f"ECORaw/{file_name}")
 
-                # Upload the file to Azure Blob Storage
-                blob_name = f"{aid_number}/{os.path.basename(processed_file)}"  # Use aid_number as folder in Azure
-                file_url = upload_to_azure_blob(processed_file, blob_name)
-
-                # Insert file metadata into MySQL
-                region_id = int(aid_number.replace("aid", ""))  # Extract region_id from aid_number
-                file_type = "GeoTIFF" if processed_file.endswith(".tif") else "CSV"  # Adjust based on file type
-                insert_file(task_id, region_id, os.path.basename(processed_file), file_url, file_type)
-
-                # Add the file to the aid_files dictionary for later processing
-                if aid_number not in aid_files:
-                    aid_files[aid_number] = output_folder  # Track the folder for each aid
+                # Store in MySQL
+                # insert_file_sql(task_id, output_folder, file_name, "raw", firebase_link)
 
 
         else:
             # Handle general files without aid numbers (e.g., XML, CSV, JSON)
-            local_filename = os.path.join(pt, file_name)  # Save directly to the base folder
-            print(f"Downloading to base folder: {local_filename}")
+            base_name, ext = os.path.splitext(file_name)
+            new_file_name = f"{base_name}_{timestamp}{ext}"  # Append timestamp before extension
+            local_filename = os.path.join(raw_path, new_file_name)  # Save directly to the base folder
+
+            # print(f"Downloading to base folder: {local_filename}")
 
             download_url = f"{url}/{file_id}"
             download_response = requests.get(download_url, headers=headers, stream=True, allow_redirects=True)
@@ -209,154 +267,342 @@ def download_results(task_id, headers):
             with open(local_filename, 'wb') as f:
                 for chunk in download_response.iter_content(chunk_size=8192):
                     f.write(chunk)
+
+            new_files.append(local_filename)  # Track newly downloaded file
             print(f"Downloaded {local_filename}")
-            # Upload the file to Azure Blob Storage
-            blob_name = f"{aid_number}/{file_name}"  # Use aid_number as folder in Azure
-            file_url = upload_to_azure_blob(local_filename, blob_name)
 
-            # Insert file metadata into MySQL
-            region_id = int(aid_number.replace("aid", ""))  # Extract region_id from aid_number
-            if file_name.endswith(".csv"):
-                file_type = "CSV"
-            elif file_name.endswith(".xml"):
-                file_type = "XML"
-            elif file_name.endswith(".json"):
-                file_type = "JSON"
-            insert_file(task_id, region_id, file_name, file_url, file_type)
+    # Open the log file in append mode
+    file_path = f"updates_{timestamp}.txt"  # Each run creates a new file
+    os.path.join(log_path, file_path)
 
-    # Step 2: Process each aid_folder once all files are downloaded
-    for aid_number, folder in aid_files.items():
-        print(f"Processing rasters in folder: {folder} for aid number: {aid_number}")
-        process_rasters(folder)
-        print(f"Rasters processed for aid number: {aid_number}")
+    # Open the new file and save updates
+    with open(file_path, 'w', encoding='utf-8') as file:
+        file.write(f"Timestamp: {timestamp}\n\n")
+
+        # Log task information
+        file.write("[Task Info]\n")
+        file.write(json.dumps(task_id, indent=4))  # Format JSON output
+        file.write(json.dumps(sd, indent=4))  # Format JSON output
+        file.write(json.dumps(ed, indent=4))  # Format JSON output
+        file.write("\n")
+
+        # Log list update
+        file.write("[Updated Aids]\n")
+        file.write(json.dumps(list(updated_aids), indent=4))  # Format JSON output
+        file.write("\n")
+
+        # Log dictionary update
+        file.write("[New Files]\n")
+        file.write(json.dumps(new_files, indent=4))  # Format JSON output
+        file.write("\n\n")
+
+        # Log list update
+        file.write("[New Dates]\n")
+        # file.write(json.dumps(new_dates, indent=4))  # Format JSON output
+        file.write("\n")
+
+        # Log dictionary update
+        file.write("[Aid Folder Mapping]\n")
+        file.write(json.dumps(aid_folder_mapping, indent=4))  # Format JSON output
+        file.write("\n\n")
+
+    print(f"Updates saved to {file_path}.")
 
 
-# Function to process the raster files
-def process_rasters(output_folder):
-    raster_files = [os.path.join(output_folder, f) for f in os.listdir(output_folder) if f.endswith('.tif')]
+# Function to extract aid number and date from filename
+def extract_metadata(filename):
+    aid_match = re.search(r'aid(\d{4})', filename)
+    date_match = re.search(r'doy(\d{13})', filename)
 
-    for tif_file in raster_files:
-        with rasterio.open(tif_file) as src:
-            lst = src.read(1)  # Load LST layer
-            lst_filtered = np.where(lst == -9999, np.nan, lst)  # Replace nodata with NaN
+    aid_number = int(aid_match.group(1)) if aid_match else None
+    date = date_match.group(1) if date_match else None
 
-            # Save the filtered raster back
-            filtered_file = tif_file.replace(".tif", "_filtered.tif")
-            with rasterio.open(
-                filtered_file,
-                'w',
-                driver='GTiff',
-                height=lst_filtered.shape[0],
-                width=lst_filtered.shape[1],
-                count=1,
-                dtype='float32',
-                crs=src.crs,
-                transform=src.transform
-            ) as dst:
-                dst.write(lst_filtered, 1)
+    return aid_number, date
 
-            print(f"Filtered raster saved: {filtered_file}")
-            return filtered_file
+# Function to filter only new folders and return unique folders
+def get_updated_folders(new_files):
+    return {extract_metadata(f)[0] for f in new_files if extract_metadata(f)[0]}
+
+# Function to filter only new files and return unique dates
+def get_updated_dates(new_files):
+    return {extract_metadata(f)[1] for f in new_files if extract_metadata(f)[1]}
+
+# Function to read a specific raster layer
+def read_raster(layer_name, relevant_files):
+    matches = [f for f in relevant_files if layer_name in f]
+    return rasterio.open(matches[0]) if matches else None
+
+# Function to read raster as NumPy array
+def read_array(raster):
+    return raster.read(1) if raster else None
+
+# Function to process a single date
+def process_rasters(aid_number, date, new_files):
+    print(f"Processing date: {date} for aid: {aid_number}")
+    relevant_files = []
+    # for f in new_files if aid_number and date in FILENAME
+    for f in new_files:
+        aid, f_date = extract_metadata(f)
+        if aid == aid_number and date == f_date:
+            relevant_files.append(f)
+    # relevant_files = [f for f in new_files if date in f]
+    if not relevant_files:
+        print(f"No files found for date: {date}")
+        return
+
+    # Read raster layers
+    LST = read_raster("LST_doy", relevant_files)
+    LST_err = read_raster("LST_err", relevant_files)
+    QC = read_raster("QC", relevant_files)
+    #wt = read_raster("water", relevant_files)
+    cl = read_raster("cloud", relevant_files)
+    EmisWB = read_raster("EmisWB", relevant_files)
+    heig = read_raster("height", relevant_files)
+
+    if None in [LST, LST_err, QC, cl, EmisWB, heig]:
+        print(f"Skipping {date} due to missing layers.")
+        return
+
+    # Read raster data into NumPy arrays
+    arrays = {key: read_array(layer) for key, layer in {
+        "LST": LST, "LST_err": LST_err, "QC": QC, "cloud": cl, "EmisWB": EmisWB, "height": heig
+    }.items()}
+
+    # Get AID number
+    name, location = aid_folder_mapping.get(aid_number, (None, None))
+    if not name or not location:
+        print(f"No mapping found for AID: {aid_number}, skipping...")
+        return
+
+    # Define destination folder
+    dest_folder_raw = os.path.join(raw_path, name, location)
+    dest_folder_filtered = os.path.join(filtered_path, name, location)
+    os.makedirs(dest_folder_raw, exist_ok=True)
+    os.makedirs(dest_folder_filtered, exist_ok=True)
+
+    raw_tif_path = os.path.join(dest_folder_raw, f"{name}_{location}_{date}_raw.tif")
+    # Update metadata to match the number of bands
+    raw_meta = LST.meta.copy()
+    raw_meta.update(dtype=rasterio.float32, count=len(arrays))  # Ensure correct band count
+
+    # Open the new TIF file with multiple bands
+    with rasterio.open(raw_tif_path, "w", **raw_meta) as dst:
+        for idx, (key, data) in enumerate(arrays.items(), start=1):
+            dst.write(data, idx)  # Ensure it writes within the correct band range
+
+    print(f"Saved raw raster: {raw_tif_path}")
+
+    # Convert raster data to DataFrame
+    rows, cols = arrays["LST"].shape
+    x, y = np.meshgrid(np.arange(cols), np.arange(rows))
+
+    df = pd.DataFrame({
+        "x": x.flatten(),
+        "y": y.flatten(),
+        **{key: arr.flatten() for key, arr in arrays.items()}
+    })
+
+    # Save raw CSV
+    raw_csv_path = os.path.join(dest_folder_raw, f"{name}_{location}_{date}_raw.csv")
+    df.to_csv(raw_csv_path, index=False)
+    print(f"Saved raw CSV: {raw_csv_path}")
+
+    # Apply filtering
+    for col in ["LST", "LST_err", "QC", "EmisWB", "height"]:
+        df[f"{col}_filter"] = np.where(df["QC"].isin(INVALID_QC_VALUES), np.nan, df[col])
+
+    for col in ["LST_filter", "LST_err_filter", "QC_filter", "EmisWB_filter", "height_filter"]:
+        df[f"{col}"] = np.where(df["cloud"] == 1, np.nan, df[col])
+        # df[f"{col}"] = np.where(df["wt"] == 0, np.nan, df[col])
+
+    # Save filtered CSV
+    filter_csv_path = os.path.join(dest_folder_filtered, f"{name}_{location}_{date}_filter.csv")
+    df.to_csv(filter_csv_path, index=False)
+    print(f"Saved filtered CSV: {filter_csv_path}")
+
+    # Convert filtered data back to raster
+    def create_raster(data, reference_raster):
+        meta = reference_raster.meta.copy()
+        meta.update(dtype=rasterio.float32, count=1)
+        return data.reshape(rows, cols).astype(np.float32), meta
+
+    filtered_rasters = {
+        "LST": create_raster(df["LST_filter"].values, LST),
+        "LST_err": create_raster(df["LST_err_filter"].values, LST),
+        "QC": create_raster(df["QC_filter"].values, LST),
+        "EmisWB": create_raster(df["EmisWB_filter"].values, LST),
+        "height": create_raster(df["height_filter"].values, LST),
+    }
+
+        # Save filtered raster
+    filter_tif_path = os.path.join(dest_folder_filtered, f"{name}_{location}_{date}_filter.tif")
+    filter_meta = filtered_rasters["LST"][1].copy()
+    filter_meta.update(dtype=rasterio.float32, count=len(filtered_rasters))  # Correct band count
+
+    # Save filtered raster
+    with rasterio.open(filter_tif_path, "w", **filter_meta) as dst:
+        for idx, (key, (data, _)) in enumerate(filtered_rasters.items(), start=1):
+            dst.write(data, idx)  # Ensure correct band range
+    print(f"Saved filtered raster: {filter_tif_path}")
+
+    # Choose one raster to classify (assumes LST_doy as main input)
+    input_tiff = filter_tif_path
+    if not input_tiff:
+        print(f"No LST file found for {date}, skipping classification.")
+        return
+
+    crs = LST.crs
+
+    # Call R script and get wetted classification
+    wetted_array = classify_wetted_area(input_tiff, dest_folder_filtered, crs)
+    if wetted_array is None:
+        print(f"Skipping wetted classification for {date} due to R script failure.")
+        return
+
+    # Apply the wetted classification mask to each raster
+    for file in input_tiff:
+        with rasterio.open(file) as src:
+            meta = src.meta.copy()
+            array = src.read(1)
+
+        # Apply wetted mask
+        filtered_array = np.where(wetted_array == 1, array, np.nan)
+
+        # Save the filtered raster
+        filtered_output_path = file.replace(".tif", "_GAM4.tif")
+        with rasterio.open(filtered_output_path, "w", **meta) as dst:
+            dst.write(filtered_array, 1)
+        print(f"Processed raster saved: {filtered_output_path}")
+
+    print(f"Finished processing {date}")
 
 # Function to Insert Task into MySQL
-def insert_task(task_id, task_name, start_date, end_date):
+def insert_task_sql(task_id, start_date, end_date):
     connection = create_db_connection()
     if connection:
         cursor = connection.cursor()
         query = """
-        INSERT INTO tasks (task_id, task_name, start_date, end_date, status, submission_time)
-        VALUES (%s, %s, %s, %s, 'queued', NOW())
-        ON DUPLICATE KEY UPDATE status='queued', submission_time=NOW();
+        INSERT INTO tasks (task_id, request_timestamp, start_date, end_date, status)
+        VALUES (%s, NOW(), %s, %s, %s)
         """
-        cursor.execute(query, (task_id, task_name, start_date, end_date))
+        cursor.execute(query, (task_id, start_date, end_date))
         connection.commit()
         cursor.close()
         connection.close()
         print("Task inserted into MySQL")
 
 # Function to Insert Downloaded File Info into MySQL
-def insert_file(task_id, region_id, file_name, file_path, file_type):
+def insert_file_sql(task_id, region_id, file_name, file_type, file_link):
     connection = create_db_connection()
-    if connection:
-        cursor = connection.cursor()
-        query = """
-        INSERT INTO files (task_id, region_id, file_name, file_path, file_type, download_time)
-        VALUES (%s, %s, %s, %s, %s, NOW());
-        """
-        cursor.execute(query, (task_id, region_id, file_name, file_path, file_type))
-        connection.commit()
-        cursor.close()
-        connection.close()
-        print(f"File {file_name} inserted into MySQL")
+    cursor = connection.cursor()
 
-"""
-# Function to Insert Processed Raster Info into MySQL
-def insert_raster(file_id, raster_name, raster_path, raster_type, filtered_path):
-    connection = create_db_connection()
-    if connection:
-        cursor = connection.cursor()
-        query = "
-        INSERT INTO rasters (file_id, raster_name, raster_path, raster_type, filtered_path, processing_time)
-        VALUES (%s, %s, %s, %s, %s, NOW());
-        "
-        cursor.execute(query, (file_id, raster_name, raster_path, raster_type, filtered_path))
-        connection.commit()
-        cursor.close()
-        connection.close()
-        print(f"Raster {raster_name} inserted into MySQL")"""
+    query = """
+    INSERT INTO files (task_id, region_id, file_name, file_type, file_link, upload_time)
+    VALUES (%s, %s, %s, %s, %s, NOW())
+    """
+    cursor.execute(query, (task_id, region_id, file_name, file_type, file_link))
+    connection.commit()
+    cursor.close()
+    connection.close()
+    print(f"File {file_name} inserted into MySQL")
 
-# Function to Upload to Azure Blob Storage
-def upload_to_azure_blob(file_path, blob_name):
-    blob_service_client = BlobServiceClient.from_connection_string(CONNECTION_STRING)
-    blob_client = blob_service_client.get_blob_client(container=CONTAINER_NAME, blob=blob_name)
-    
-    with open(file_path, "rb") as data:
-        blob_client.upload_blob(data, overwrite=True)
-    
-    print(f"File uploaded to Azure Blob: {blob_name}")
-    return blob_client.url
+# Main function to process all new files using multiprocessing
+def process_all(all_new_files):
+    # updated_aids = get_updated_folders(all_new_files)
+    print(updated_aids)
 
-# Submit task in one go
+    if not updated_aids:
+        print("No new folders to process.")
+        return
+
+    print(f"Processing {len(updated_aids)} updated folders...")
+
+    # Process each updated folder and date
+    for aid_number in updated_aids:
+        aid_folder_files = []
+        for file in all_new_files:
+            if aid_number == extract_metadata(file)[0]:
+                aid_folder_files.append(file)
+        new_dates_get = get_updated_dates(aid_folder_files)
+        if not new_dates_get:
+            print("No new files to process.")
+            continue
+        specific_date_files = []
+
+        for date in new_dates_get:
+            for file in aid_folder_files:
+                if date == extract_metadata(file)[1]:
+                    specific_date_files.append(file)
+            process_rasters(aid_number, date, specific_date_files)
+    print("Processing complete.")
+
+# Phase 5: Use this cleanup function after the main processing - cleanup_old_files(raw_path, days_old=20)
+def cleanup_old_files(folder_path, days_old=20):
+
+    # Calculate the cutoff time
+    cutoff_time = datetime.now() - timedelta(days=days_old)
+
+    # Iterate through each file in the folder
+    for filename in os.listdir(folder_path):
+        file_path = os.path.join(folder_path, filename)
+
+        # Only proceed if it's a file
+        if os.path.isfile(file_path):
+
+            # Get the file's modification time
+            file_mod_time = datetime.fromtimestamp(os.path.getmtime(file_path))
+
+            # Delete file if it's older than the cutoff time
+            if file_mod_time < cutoff_time:
+                os.remove(file_path)
+                print(f"Deleted {filename} (last modified on {file_mod_time})")
+
+
+# Phase 1: Submit task in one go
 task_request = build_task_request(product, layers, roi_json, sd, ed)
 task_id = submit_task(headers, task_request)
+# insert_task_sql(task_id, sd, ed)
+#task_id = "dc6b9cc9-5038-42e8-895e-3f5ae55a2601"
 print(f"Task ID: {task_id}")
 
-# Phase 1: Create Directories and Mapping
-aid_folder_mapping = {}  # Initialize mapping outside the loop
+# Phase 2: Create Directories and Mapping
+# aid_folder_mapping = {}  # Initialize mapping outside the loop
 for idx, row in roi.iterrows():
     print(f"Processing ROI {idx + 1}/{len(roi)}")
-    
+
     # Construct directory path for saving data
-    output_folder = os.path.join(pt, row['name'], row['location'])
+    output_folder = os.path.join(raw_path, row['name'], row['location'])
     os.makedirs(output_folder, exist_ok=True)
     print(f"Output folder created: {output_folder}")
-    
+
     # Map aid numbers to output folders
-    aid_number = f'aid{str(idx + 1).zfill(4)}'  # Construct aid number
-    aid_folder_mapping[aid_number] = output_folder
+#    aid_number = f'aid{str(idx + 1).zfill(4)}'  # Construct aid number
+    aid_number = idx  # Construct aid number
+    aid_folder_mapping[aid_number] = (row['name'], row['location'])  # Map aid number to folder
 
-
+# Phase 3: Check the status of the single task
 print("All tasks submitted!")
+print("Checking task statuses...")
+status = check_task_status(task_id, headers)
+if status:
+    print(f"Downloading results for Task ID: {task_id}...")
+    download_results(task_id, headers)  # Pass the roi DataFrame for dynamic mapping
+print("All tasks completed, results downloaded!")
 
-# Phase 2: Check task statuses periodically (every 30 seconds)
-completed_tasks = []
+# Phase 4: Process the downloaded files
+process_all(new_files)
 
-while len(completed_tasks) < 1:  # Change to 1 since we only have one task
-    print("Checking task statuses...")
-    
-    # Check the status of the single task
-    status = check_task_status(task_id, headers)
-    
-    if status:  # Replace True with the actual status string for completion
-        print(f"Downloading results for Task ID: {task_id}...")
-        download_results(task_id, headers)  # Pass the roi DataFrame for dynamic mapping
-        # Process the downloaded rasters
-        process_rasters(pt)  # Assuming you want to process all data in the base output directory
-        print(f"Rasters processed for Task ID: {task_id}")
-        completed_tasks.append(task_id)
-    
-    if len(completed_tasks) < 1:
-        print("Task not completed yet. Waiting for 30 seconds...")
-        time.sleep(30)  # Wait for 30 seconds before checking statuses again
+# Phase 5: Cleanup old files
+# cleanup_old_files(raw_path, days_old=20)
 
-print("All tasks completed, results downloaded, and rasters processed.")
+# def delete_files_with_short_date(folder_path):
+#     for root, _, files in os.walk(folder_path):
+#         for file in files:
+#             date_match = re.search(r'\d{7}', file)
+#             if date_match and not re.search(r'\d{13}', file):
+#                 file_path = os.path.join(root, file)
+#                 os.remove(file_path)
+#                 print(f"Deleted {file_path}")
+
+# # Example usage
+# delete_files_with_short_date(filtered_path)
