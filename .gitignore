@@ -37,3 +37,5 @@ firebase_old/
 # Workspace & project-specific files
 GAM4water_0.0.4.R
 sat-water-temps.code-workspace
+.env
+.gitignore

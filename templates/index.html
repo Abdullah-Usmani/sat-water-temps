@@ -7,7 +7,7 @@
 
     <!-- Link to external stylesheet -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap">
-    <link rel="stylesheet" href="main.css">
+    <link rel="stylesheet" href="/static/main.css">
 
     <!-- Load necessary libraries -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -162,33 +162,32 @@
                 attribution: 'Tiles &copy; Esri, Maxar, Earthstar Geographics, and the GIS User Community',
                 maxZoom: 19
             }).addTo(map); // This adds the satellite layer directly
-    
-            fetch("/static/polygons_new.geojson")
-                .then(response => response.json())
-                .then(data => {
-                    L.geoJSON(data, {
-                        style: function (feature) {
-                            return { color: "#8abbff", weight: 2 };
-                        },
-                        onEachFeature: function (feature, layer) {
-                            layer.on({
-                                mouseover: function () { layer.setStyle({ color: "#00ff00" }); },
-                                mouseout: function () { layer.setStyle({ color: "#8abbff" }); },
-                                click: function () {
+            const geojsonData = JSON.parse('{{ geojson | safe }}');
+            if (geojsonData) {
+                L.geoJSON(geojsonData, {
+                    style: function (feature) {
+                        return { color: "#8abbff", weight: 2 };
+                    },
+                    onEachFeature: function (feature, layer) {
+                        layer.on({
+                            mouseover: function () { layer.setStyle({ color: "#00ff00" }); },
+                            mouseout: function () { layer.setStyle({ color: "#8abbff" }); },
+                            click: function () {
                                 const featureId = feature.properties.name;
-                                    if (featureId) {
-                                        window.location.href = `/feature/${featureId}`;
-                                    } else {
-                                        alert("No valid feature ID found.");
-                                    }
+                                if (featureId) {
+                                    window.location.href = `/feature/${featureId}`;
+                                } else {
+                                    alert("No valid feature ID found.");
                                 }
-                            });
-                        }
-                    }).addTo(map);
-                })
-                .catch(error => console.error("Error loading GeoJSON:", error));
+                            }
+                        });
+                    }
+                }).addTo(map);
+            } else {
+                console.error("GeoJSON data is not available.");
+            }
         });
     </script>
-    
+
 </body>
 </html>
