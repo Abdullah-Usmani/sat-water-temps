@@ -312,8 +312,13 @@ def process_rasters(aid_number, date, selected_files):
             df[f"{col}"] = np.where(df["wt"] == 0, np.nan, df[col])
         filter_csv_path = os.path.join(dest_folder_filtered, f"{name}_{location}_{date}_filter_wtoff.csv")
         filter_tif_path = os.path.join(dest_folder_filtered, f"{name}_{location}_{date}_filter_wtoff.tif")
+
+    for col in ["LST", "LST_err", "QC", "EmisWB"]:
+        df.drop(columns=[f"{col}"], inplace=True)
+
+    df.dropna(subset=["LST_filter"], inplace=True)
+            
     # Save filtered CSV
-    
     df.to_csv(filter_csv_path, index=False)
     multi_files.append(filter_csv_path)
     print(f"Saved filtered CSV: {filter_csv_path}")
@@ -342,8 +347,14 @@ def process_rasters(aid_number, date, selected_files):
             dst.write(data, idx)  # Ensure correct band range
     multi_aids.add(aid_number)
     multi_files.append(filter_tif_path)
-    print(f"Saved filtered raster: {filter_tif_path}")
 
+    # Save raster metadata to a .txt file
+    metadata_file_path = os.path.join(dest_folder_filtered, f"{name}_{location}_metadata.txt")
+    with open(metadata_file_path, 'w') as meta_file:
+        meta_file.write(str(filter_meta))
+    print(f"Saved raster metadata: {metadata_file_path}")
+
+    print(f"Saved filtered raster: {filter_tif_path}")
     print(f"Finished processing {date}")
 
 # Main function to process all new files using multiprocessing
@@ -399,7 +410,6 @@ def cleanup_old_files(folder_path, days_old=20):
                 os.remove(file_path)
                 print(f"Deleted {filename} (last modified on {file_mod_time})")
 
-
 def log_updates():
     # Open the log file in append mode
     file_path = f"updates_{timestamp}.txt"  # Each run creates a new file
@@ -448,13 +458,13 @@ def log_updates():
     print(f"Updates saved to {full_path}.")
 
 # Phase 1: Submit task in one go
-# task_request = build_task_request(product, layers, roi_json, sd, ed)
-# task_id = submit_task(headers, task_request)
-task_id = "3dd9c96f-d1dd-4e94-a79e-19708db263e2"
+task_request = build_task_request(product, layers, roi_json, sd, ed)
+task_id = submit_task(headers, task_request)
+# task_id = "3dd9c96f-d1dd-4e94-a79e-19708db263e2"
 print(f"Task ID: {task_id}")
 
 # # Phase 2: Create Directories and Mapping
-# aid_folder_mapping = {}  # Initialize mapping outside the loop
+aid_folder_mapping = {}  # Initialize mapping outside the loop
 for idx, row in roi.iterrows():
     print(f"Processing ROI {idx + 1}/{len(roi)}")
     
@@ -485,3 +495,62 @@ process_all(new_files)
 
 # Phase 6: Log updates
 log_updates()
+
+def clean_filtered_csvs(filtered_path):
+    for root, _, files in os.walk(filtered_path):
+        for file in files:
+            if file.endswith(".csv"):
+                file_path = os.path.join(root, file)
+                try:
+                    df = pd.read_csv(file_path)
+                    for col in ["LST", "LST_err", "QC", "EmisWB"]:
+                        df.drop(columns=[f"{col}"], inplace=True)
+                    df.dropna(subset=["LST_filter"], inplace=True)
+                    df.to_csv(file_path, index=False)
+                    print(f"Cleaned file: {file_path}")
+                except Exception as e:
+                    print(f"Error processing file {file_path}: {e}")
+
+# def convert_csv_to_tif():
+    # """
+    # Converts a single CSV file to a GeoTIFF file using a reference raster for geospatial metadata.
+
+    # Args:
+    #     csv_path (str): Path to the CSV file.
+    #     output_tif_path (str): Path to the output GeoTIFF file.
+    #     reference_raster_path (str): Path to a reference raster file for geospatial metadata.
+    # """
+
+    # csv_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECO\Ambuclao\lake\Ambuclao_lake_2025047192336_filter.csv"
+    # output_tif_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECO\Ambuclao\lake\testtest.tif"
+    # reference_raster_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECO\Ambuclao\lake\Ambuclao_lake_2025047192336_filter.tif"
+    # # Load reference raster for metadata
+    # with rasterio.open(reference_raster_path) as ref_raster:
+    #     ref_meta = ref_raster.meta.copy()
+    #     rows, cols = ref_meta['height'], ref_meta['width']
+
+    #     print(f"Reference Metadata: {ref_meta}")
+    # try:
+    #     # Read CSV data
+    #     df = pd.read_csv(csv_path)
+    #     if "x" not in df.columns or "y" not in df.columns:
+    #         print(f"Skipping {csv_path}: Missing 'x' or 'y' columns.")
+    #         return
+
+    #     # Extract raster data from DataFrame
+    #     raster_data = np.full((rows, cols), np.nan, dtype=np.float32)
+    #     raster_data[df["y"], df["x"]] = df["LST_filter"]
+
+    #     # Update metadata for single-band raster
+    #     ref_meta.update(dtype=rasterio.float32, count=1)
+
+    #     # Save to GeoTIFF
+    #     with rasterio.open(output_tif_path, "w", **ref_meta) as dst:
+    #         dst.write(raster_data, 1)
+
+    #     print(f"Converted {csv_path} to {output_tif_path}")
+    # except Exception as e:
+    #     print(f"Error processing {csv_path}: {e}")
+
+# # Phase 7: Reconstruct the filtered CSVs
+# clean_filtered_csvs(filtered_path)
