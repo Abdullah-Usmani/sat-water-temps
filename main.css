@@ -1,0 +1,116 @@
+/* styles.css */
+
+body {
+    font-family: 'Arial', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #0b1a2e; /* Deep navy background for a space-inspired look */
+    color: #e0e0e0; /* Light gray text for better readability */
+}
+
+a {
+    text-decoration: none;
+    color: #00aaff; /* Bright blue for link color */
+}
+
+header {
+    background-color: #102a43; /* Dark blue for header */
+    padding: 20px;
+    color: #ffffff;
+    text-align: center;
+    font-size: 26px;
+    font-weight: bold;
+}
+
+nav {
+    display: flex;
+    justify-content: center;
+    background-color: #1f4f96; /* Mid-tone blue for navigation bar */
+    padding: 15px;
+}
+
+nav a {
+    margin: 0 20px;
+    color: #ffffff;
+    font-size: 18px;
+    text-transform: uppercase;
+    font-weight: bold;
+    transition: color 0.3s ease;
+}
+
+nav a:hover {
+    color: #00aaff; /* Link hover effect for better interactivity */
+}
+
+.hero {
+    background: url('satellite-view.jpg') no-repeat center center/cover;
+    height: 500px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    text-align: center;
+    font-size: 36px;
+    font-weight: bold;
+    background-blend-mode: overlay;
+    background-color: rgba(0, 0, 0, 0.4); /* Dark overlay for better text visibility */
+}
+
+section {
+    padding: 40px;
+    max-width: 1200px;
+    margin: auto;
+}
+
+.intro {
+    text-align: center;
+    padding: 30px;
+    background-color: #1a1a1a; /* Dark gray background for contrast */
+    border-radius: 8px;
+    color: #e0e0e0;
+}
+
+.map-container {
+    margin-top: 40px;
+    background-color: #1a1a1a;
+    padding: 20px;
+    border-radius: 8px;
+}
+
+.footer {
+    background-color: #102a43; /* Same as header for uniformity */
+    color: #ffffff;
+    padding: 20px;
+    text-align: center;
+    margin-top: 40px;
+}
+
+#map {
+    height: 500px;
+    width: 100%;
+    border-radius: 8px; /* Rounded corners for a polished look */
+}
+
+/* Additional Styles */
+button {
+    background-color: #00aaff;
+    color: #ffffff;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #008fcc;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: #ffffff;
+}
+
+p {
+    line-height: 1.6;
+}
