@@ -14,7 +14,7 @@ from multiprocessing import Pool, cpu_count
 print("Setting Directory Paths")
 raw_path = r"/Users/ssj/Desktop/SatelliteRetrievalProject/MODISraw/"
 filtered_path = r"/Users/ssj/Desktop/SatelliteRetrievalProject/MODIS/"
-roi_path = r"/Users/ssj/Desktop/SatelliteRetrievalProject/polygon/site_full_ext_Corrected.shp"
+roi_path = r"/Users/ssj/Desktop/SateliteRetrievalProjec/polygon/corrected/site_full_ext_Corrected.shp"
 log_path = r"/Users/ssj/Desktop/SatelliteRetrievalProject/logs/"
 download_log = os.path.join(log_path, "downloaded_files.json")
 log_file = os.path.join(log_path, f"modis_retrieval_{datetime.now().strftime('%Y%m%d_%H%M')}.log")
@@ -405,7 +405,7 @@ def process_single_water_quality(args):
     aid_number, date, specific_date_files = args
     process_rasters(aid_number, date, specific_date_files)
 
-# Main function to process all new water quality files using multiprocessing
+# Main function to process all new water quality files
 def process_all_water_quality(all_new_files):
     updated_aids = get_updated_folders(all_new_files)  # Identify updated folders
     print(updated_aids)
@@ -416,9 +416,7 @@ def process_all_water_quality(all_new_files):
 
     print(f"Processing {len(updated_aids)} updated water quality datasets...")
 
-    tasks = []
-
-    # Collect processing tasks
+    # Iterate through each updated folder
     for aid_number in updated_aids:
         aid_folder_files = [file for file in all_new_files if aid_number == extract_metadata(file)[0]]
 
@@ -426,22 +424,132 @@ def process_all_water_quality(all_new_files):
         if not new_dates_get:
             print(f"No new water quality files to process for AID {aid_number}.")
             continue
+        specific_date_files = []
 
+        # Process each specific date's water quality files
         for date in new_dates_get:
-            specific_date_files = [file for file in aid_folder_files if date == extract_metadata(file)[1]]
-            tasks.append((aid_number, date, specific_date_files))
+           for file in aid_folder_files:
+                if date == extract_metadata(file)[1]:
+                    specific_date_files.append(file)
 
-    # Use multiprocessing to process tasks in parallel
-    num_workers = min(len(tasks), cpu_count())  # Use available CPUs but not exceed task count
-    with Pool(processes=num_workers) as pool:
-        pool.map(process_single_water_quality, tasks)
+        process_rasters(aid_number, date, specific_date_files)
 
     print("Water quality processing complete.")
 
     ################ LINE 382 Start here ####################
 
+    # Phase 5: Use this cleanup function after the main processing - cleanup_old_files(raw_path, days_old=20)
+def cleanup_old_water_quality_files(folder_path, days_old=20):
+    """
+    Deletes water quality files older than the specified number of days.
 
+    Args:
+        folder_path (str): Path to the folder containing water quality files.
+        days_old (int): Number of days before files are considered old and deleted.
+    """
+    # Calculate the cutoff time
+    cutoff_time = datetime.now() - timedelta(days=days_old)
 
+    # Iterate through each file in the folder
+    for filename in os.listdir(folder_path):
+        file_path = os.path.join(folder_path, filename)
 
+        # Ensure it's a file before processing
+        if os.path.isfile(file_path):
+            file_mod_time = datetime.fromtimestamp(os.path.getmtime(file_path))
 
+            # Delete file if it's older than the cutoff time
+            if file_mod_time < cutoff_time:
+                os.remove(file_path)
+                print(f"Deleted old water quality file: {filename} (Last modified: {file_mod_time})")
 
+def log_water_quality_updates():
+
+    """
+    Logs updates related to water quality processing.
+
+    Args:
+        log_path (str): Path to the directory where logs will be stored.
+        task_id (dict): Task-related information.
+        updated_aids (set): Set of updated water quality AIDs.
+        new_files (dict): Dictionary of newly processed files.
+        multi_aids (set): Set of multi-aid entries.
+        multi_files (dict): Dictionary of multi-aid files.
+        aid_folder_mapping (dict): Mapping of AID folders.
+        sd (dict): Start date information.
+        ed (dict): End date information.
+    """
+
+    # Generate timestamp for log filename
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    file_path = f"water_quality_updates_{timestamp}.txt"
+    full_path = os.path.join(log_path, file_path)
+
+    # Open the new file and save updates
+    with open(full_path, 'w', encoding='utf-8') as file:
+        file.write(f"Timestamp: {timestamp}\n\n")
+
+        # Log task information
+        file.write("[Task Info]\n")
+        file.write(json.dumps(task_id, indent=4) + "\n")
+        file.write(json.dumps(sd, indent=4) + "\n")
+        file.write(json.dumps(ed, indent=4) + "\n\n")
+
+        # Log updated AIDs
+        file.write("[Updated Water Quality AIDs]\n")
+        file.write(json.dumps(list(updated_aids), indent=4) + "\n\n")
+
+        # Log new files
+        file.write("[New Water Quality Files]\n")
+        file.write(json.dumps(new_files, indent=4) + "\n\n")
+
+        # Log multiple AID handling
+        file.write("[Multi AIDs]\n")
+        file.write(json.dumps(list(multi_aids), indent=4) + "\n\n")
+
+        file.write("[Multi Files]\n")
+        file.write(json.dumps(multi_files, indent=4) + "\n\n")
+
+        # Log AID Folder Mapping
+        file.write("[AID Folder Mapping]\n")
+        file.write(json.dumps(aid_folder_mapping, indent=4) + "\n\n")
+
+    print(f"Water quality processing updates saved to {full_path}.")
+# Phase 1: Submit task in one go
+task_request = build_task_request(product, layers, roi_json, sd, ed)
+task_id = submit_task(headers, task_request)
+# task_id = "d0e5be4a-3747-46cb-9f63-ec24872ee799"
+print(f"Task ID: {task_id}")
+
+# # Phase 2: Create Directories and Mapping
+# aid_folder_mapping = {}  # Initialize mapping outside the loop
+for idx, row in roi.iterrows():
+    print(f"Processing ROI {idx + 1}/{len(roi)}")
+    
+    # Construct directory path for saving data
+    output_folder = os.path.join(raw_path, row['name'], row['location'])
+    os.makedirs(output_folder, exist_ok=True)
+    print(f"Output folder created: {output_folder}")
+    
+    # Map aid numbers to output folders
+#    aid_number = f'aid{str(idx + 1).zfill(4)}'  # Construct aid number
+    aid_number = int(idx + 1)  # Construct aid number
+    aid_folder_mapping[int(aid_number)] = (row['name'], row['location'])  # Map aid number to folder
+
+# Phase 3: Check the status of the single task
+print("All tasks submitted!")
+print("Checking task statuses...")
+status = check_task_status(task_id, headers)
+if status:
+    print(f"Downloading results for Task ID: {task_id}...")
+    download_results(task_id, headers)  # Pass the roi DataFrame for dynamic mapping    
+print("All tasks completed, results downloaded!")
+
+# Phase 4: Process the downloaded files
+process_all_water_quality(new_files)
+
+# Phase 5: Cleanup old files
+# cleanup_old_files(raw_path, days_old=20)
+
+# Phase 6: Log updates
+log_water_quality_updates()
