@@ -19,12 +19,13 @@ from firebase_admin import credentials, storage
 # Directory paths
 print("Setting Directory Paths")
 
-roi_test_path = r"D:/Coding/SEGP/Water Temp Sensors_Jephtha/polygon/test/site_full_ext_Test.shp"
-raw_path = r"D:/Coding/SEGP/Water Temp Sensors_Jephtha/ECOraw/"
-filtered_path = r"D:/Coding/SEGP/Water Temp Sensors_Jephtha/ECO/"
-roi_path = r"D:/Coding/SEGP/Water Temp Sensors_Jephtha/polygon/new_polygons.shp"
-log_path = r"D:/Coding/SEGP/Water Temp Sensors_Jephtha/logs/"
-R_path = r"D:/Coding/SEGP/Water Temp Sensors_Jephtha/GAM4water_0.0.4.R"
+base_dir = os.path.dirname(os.path.abspath(__file__))
+roi_test_path = os.path.join(base_dir, "polygon/test/site_full_ext_Test.shp")
+raw_path = os.path.join(base_dir, "ECOraw")
+filtered_path = os.path.join(base_dir, "ECO")
+roi_path = os.path.join(base_dir, "polygon/new_polygons.shp")
+log_path = os.path.join(base_dir, "logs")
+R_path = os.path.join(base_dir, "GAM4water_0.0.4.R")
 
 #Verify File Paths
 if not os.path.exists(roi_test_path):
@@ -131,9 +132,8 @@ def classify_wetted_area(input_tiff, output_dir, crs):
     ref_crs = crs.to_string() if crs else None
     try:
         subprocess.run([
-            "Rscript", R_path,
-            input_tiff, output_dir, ref_crs if ref_crs else "NULL"],
-            check=True)
+            "Rscript", R_path, input_tiff, output_dir, ref_crs, roi_test_path
+            ], check=True)
 
         if not os.path.exists(wetted_tiff):
             print(f"Error: Wetted raster {wetted_tiff} not found!")
@@ -150,7 +150,7 @@ def classify_wetted_area(input_tiff, output_dir, crs):
         return wetted_array
 
     except subprocess.CalledProcessError as e:
-        print(f"Error running GAM4water: {e}")
+        print(f"R script failed with return code {e.returncode}")
         return None
 
 
@@ -354,7 +354,7 @@ def process_rasters(aid_number, date, new_files):
     LST = read_raster("LST_doy", relevant_files)
     LST_err = read_raster("LST_err", relevant_files)
     QC = read_raster("QC", relevant_files)
-    #wt = read_raster("water", relevant_files)
+    wt = ""
     cl = read_raster("cloud", relevant_files)
     EmisWB = read_raster("EmisWB", relevant_files)
     heig = read_raster("height", relevant_files)

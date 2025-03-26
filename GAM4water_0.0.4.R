@@ -5,17 +5,20 @@ library(mgcv)
 
 
 # Define paths
-wt_polygon <- "/polygon/new_polygons.shp"  # Define a water polygon file
+wt_polygon <- "D:/Coding/SEGP/Water Temp Sensors_Jephtha/polygon/new_polygons.shp"  # Define a water polygon file
 
 args <- commandArgs(trailingOnly=TRUE)
-input_tiff <- args[1]  # Path to input raster TIFF
-output_dir <- args[2]  # Path to output directory
-crs <- args[3]  # CRS of the input raster
+input_tiff <- args[1]          # filtered raster file
+output_dir <- args[2]          # output folder
+ref_crs <- if (args[3] == "" || args[3] == "NULL") NULL else args[3]
+AOI_path <- args[4]            # AOI shapefile
+#wt_polygon <- args[5]          # Training shapefile (must have 'wt' column)
+
 
 
 # Output: wetted_raster01.tiff will be saved in output_dir
 
-wet_area <- function(wt_path, input_paths, NAval=0, out_path, AOI_path=wt_path, groud_truth=NULL, respl="low", classID=c("w", "t"), ref_crs=NA, xy=T, nth=4, form=NULL, gam_out=F,
+wet_area <- function(wt_path, input_paths, NAval=0, out_path, AOI_path=ROI_path, groud_truth=NULL, respl="low", classID=c("w", "t"), ref_crs=NA, xy=T, nth=4, form=NULL, gam_out=F,
                     class_prob=c(0.5, 0.5), main_water=NA, buffer=NA, full=F, geogr=F, aggregating_factor=NA) {
   if (require(terra) == F | require(sf) == F | require(mgcv) == F | require(stars) == F) {
     stop("install required packages (terra, sf, mgcv, stars)!")
@@ -57,9 +60,18 @@ wet_area <- function(wt_path, input_paths, NAval=0, out_path, AOI_path=wt_path, 
                 ifelse(mean(tab_crs$PROJ) == 1 & mean(tab_crs$epsg) == tab_crs$epsg[1], "B",
                       ifelse(mean(tab_crs$GEOG) == 1 & mean(tab_crs$epsg) != tab_crs$epsg[1], "C", "D")))
 
+  print(paste("Case:", case))
+  print(paste("ref_crs:", ref_crs))
+  print(paste("AOI_path:", AOI_path))
+  print(paste("is.null(ref_crs):", (is.null(ref_crs) | is.na(ref_crs))))
+  print(paste("is.null(AOI_path):", (is.null(AOI_path) | is.na(AOI_path))))
+  print(paste("Type of ref_crs: ", typeof(ref_crs)))
+  print(paste("Type of AOI_path: ", typeof(wt_polygon)))
+
+
   # Case A line 1, 3
-  if (case == "A" & is.null(ref_crs) == T & is.null(AOI_path) == T |
-      case == "A" & is.null(ref_crs) == F & is.null(AOI_path) == T & as.numeric(gsub("\\D", "", ref_crs[length(ref_crs)])) == tab_crs$epsg[1]) {
+  if (case == "A" & (is.null(ref_crs) | is.na(ref_crs)) == T & (is.null(AOI_path) | is.na(AOI_path)) == T |
+      case == "A" & (is.null(ref_crs) | is.na(ref_crs)) == F & (is.null(AOI_path) | is.na(AOI_path)) == T & as.numeric(gsub("\\D", "", ref_crs[length(ref_crs)])) == tab_crs$epsg[1]) {
     warning(paste("GAM4water is working on Geographical reference system(epsg:", tab_crs$epsg[1], "). Result can be inaccurate!"))
     warning("You have not set an AOI, procedure can be long especially if you're working with large raster. Consider setting an AOI")
     # Check extents and eventually crop to the raster with smallest extent
@@ -107,8 +119,8 @@ wet_area <- function(wt_path, input_paths, NAval=0, out_path, AOI_path=wt_path, 
   }
 
   # Case A line 2 and 2a
-  if (case == "A" & is.null(ref_crs) == T & is.null(AOI_path) == F |
-      case == "A" & is.null(ref_crs) == F & is.null(AOI_path) == F & as.numeric(gsub("\\D", "", ref_crs[length(ref_crs)])) == tab_crs$epsg[1]) {
+  if (case == "A" & (is.null(ref_crs) | is.na(ref_crs)) == T & (is.null(AOI_path) | is.na(AOI_path)) == F |
+      case == "A" & (is.null(ref_crs) | is.na(ref_crs)) == F & (is.null(AOI_path) | is.na(AOI_path)) == F & as.numeric(gsub("\\D", "", ref_crs[length(ref_crs)])) == tab_crs$epsg[1]) {
     warning(paste("GAM4water is working on Geographical reference system(epsg:", tab_crs$epsg[1], "). Result can be inaccurate!"))
     AOI <- read_sf(AOI_path)
     # Cropping each layer of ly
@@ -162,7 +174,7 @@ wet_area <- function(wt_path, input_paths, NAval=0, out_path, AOI_path=wt_path, 
   }
 
   # Case A line 4
-  if (case == "A" & is.null(ref_crs) == F & is.null(AOI_path) == F & as.numeric(gsub("\\D", "", ref_crs[length(ref_crs)])) != tab_crs$epsg[1]) {
+  if (case == "A" & (is.null(ref_crs) | is.na(ref_crs)) == F & (is.null(AOI_path) | is.na(AOI_path)) == F & as.numeric(gsub("\\D", "", ref_crs[length(ref_crs)])) != tab_crs$epsg[1]) {
     AA <- unlist(strsplit(crs(ref_crs), " "))
     ll <- which(grepl("GEOG", AA[1]) == T)
     if (length(ll) > 0) {
@@ -229,7 +241,7 @@ wet_area <- function(wt_path, input_paths, NAval=0, out_path, AOI_path=wt_path, 
   }
 
   # Case A line 5
-  if (case == "A" & is.null(ref_crs) == F & is.null(AOI_path) == T & as.numeric(gsub("\\D", "", ref_crs[length(ref_crs)])) != tab_crs$epsg[1]) {
+  if (case == "A" & (is.null(ref_crs) | is.na(ref_crs)) == F & (is.null(AOI_path) | is.na(AOI_path)) == T & as.numeric(gsub("\\D", "", ref_crs[length(ref_crs)])) != tab_crs$epsg[1]) {
     # Cropping each layer of ly
     AA <- unlist(strsplit(crs(ref_crs), " "))
     ll <- which(grepl("GEOG", AA[1]) == T)
@@ -286,8 +298,8 @@ wet_area <- function(wt_path, input_paths, NAval=0, out_path, AOI_path=wt_path, 
   }
 
   # Case B line 1, 3
-  if (case == "B" & is.null(ref_crs) == T & is.null(AOI_path) == T |
-      case == "B" & is.null(ref_crs) == F & is.null(AOI_path) == T & as.numeric(gsub("\\D", "", ref_crs[length(ref_crs)])) == tab_crs$epsg[1]) {
+  if (case == "B" & (is.null(ref_crs) | is.na(ref_crs)) == T & (is.null(AOI_path) | is.na(AOI_path)) == T |
+      case == "B" & (is.null(ref_crs) | is.na(ref_crs)) == F & (is.null(AOI_path) | is.na(AOI_path)) == T & as.numeric(gsub("\\D", "", ref_crs[length(ref_crs)])) == tab_crs$epsg[1]) {
     message(paste("GAM4water is working on Projected reference system(epsg:", tab_crs$epsg[1], ")."))
     warning("You have not set an AOI, procedure can be long especially if you're working with large raster. Consider setting an AOI")
     # Check extents and eventually crop to the raster with smallest extent
@@ -335,8 +347,8 @@ wet_area <- function(wt_path, input_paths, NAval=0, out_path, AOI_path=wt_path, 
   }
 
   # Case B line 2 and 2a
-  if (case == "B" & is.null(ref_crs) == T & is.null(AOI_path) == F |
-      case == "B" & is.null(ref_crs) == F & is.null(AOI_path) == F & as.numeric(gsub("\\D", "", ref_crs[length(ref_crs)])) == tab_crs$epsg[1]) {
+  if (case == "B" & (is.null(ref_crs) | is.na(ref_crs)) == T & (is.null(AOI_path) | is.na(AOI_path)) == F |
+      case == "B" & (is.null(ref_crs) | is.na(ref_crs)) == F & (is.null(AOI_path) | is.na(AOI_path)) == F & as.numeric(gsub("\\D", "", ref_crs[length(ref_crs)])) == tab_crs$epsg[1]) {
     message(paste("GAM4water is working on Projected reference system(epsg:", tab_crs$epsg[1], ")."))
     AOI <- read_sf(AOI_path)
     # Cropping each layer of ly
@@ -391,7 +403,7 @@ wet_area <- function(wt_path, input_paths, NAval=0, out_path, AOI_path=wt_path, 
   }
 
   # Case B line 4
-  if (case == "B" & is.null(ref_crs) == F & is.null(AOI_path) == F & as.numeric(gsub("\\D", "", ref_crs[length(ref_crs)])) != tab_crs$epsg[1]) {
+  if (case == "B" & (is.null(ref_crs) | is.na(ref_crs)) == F & (is.null(AOI_path) | is.na(AOI_path)) == F & as.numeric(gsub("\\D", "", ref_crs[length(ref_crs)])) != tab_crs$epsg[1]) {
     AA <- unlist(strsplit(crs(ref_crs), " "))
     ll <- which(grepl("GEOG", AA[1]) == T)
     if (length(ll) > 0) {
@@ -452,7 +464,7 @@ wet_area <- function(wt_path, input_paths, NAval=0, out_path, AOI_path=wt_path, 
   }
 
   # Case B line 5
-  if (case == "B" & is.null(ref_crs) == F & is.null(AOI_path) == T & as.numeric(gsub("\\D", "", ref_crs[length(ref_crs)])) != tab_crs$epsg[1]) {
+  if (case == "B" & (is.null(ref_crs) | is.na(ref_crs)) == F & (is.null(AOI_path) | is.na(AOI_path)) == T & as.numeric(gsub("\\D", "", ref_crs[length(ref_crs)])) != tab_crs$epsg[1]) {
     # Cropping each layer of ly
     AA <- unlist(strsplit(crs(ref_crs), " "))
     ll <- which(grepl("GEOG", AA[1]) == T)
@@ -510,7 +522,7 @@ wet_area <- function(wt_path, input_paths, NAval=0, out_path, AOI_path=wt_path, 
   }
 
   # Case C line 1 (line 3 does not exist in line C and D)
-  if (case == "C" & is.null(ref_crs) == T & is.null(AOI_path) == T) {
+  if (case == "C" & (is.null(ref_crs) | is.na(ref_crs)) == T & (is.null(AOI_path) | is.na(AOI_path)) == T) {
     warning(paste("All your raster have different Geographical reference systems. GAM4water will use first raster reference system (epsg:", tab_crs$epsg[1], "). Result can be inaccurate!"))
     warning("You have not set an AOI, procedure can be long especially if you're working with large raster. Consider setting an AOI")
 
@@ -569,7 +581,7 @@ wet_area <- function(wt_path, input_paths, NAval=0, out_path, AOI_path=wt_path, 
   }
 
   # Case C line 2
-  if (case == "C" & is.null(ref_crs) == T & is.null(AOI_path) == F) {
+  if (case == "C" & (is.null(ref_crs) | is.na(ref_crs)) == T & (is.null(AOI_path) | is.na(AOI_path)) == F) {
     warning(paste("All your raster have different Geographical reference systems. GAM4water will use first raster reference system (epsg:", tab_crs$epsg[1], "). Result can be inaccurate!"))
 
     # Homogenizing projection
@@ -636,7 +648,7 @@ wet_area <- function(wt_path, input_paths, NAval=0, out_path, AOI_path=wt_path, 
   }
 
   # Case C line 4
-  if (case == "C" & is.null(ref_crs) == F & is.null(AOI_path) == F) {
+  if (case == "C" & (is.null(ref_crs) | is.na(ref_crs)) == F & (is.null(AOI_path) | is.na(AOI_path)) == F) {
     AA <- unlist(strsplit(crs(ref_crs), " "))
     ll <- which(grepl("GEOG", AA[1]) == T)
     if (length(ll) > 0) {
@@ -702,7 +714,7 @@ wet_area <- function(wt_path, input_paths, NAval=0, out_path, AOI_path=wt_path, 
   }
 
   # Case C line 5
-  if (case == "C" & is.null(ref_crs) == F & is.null(AOI_path) == T) {
+  if (case == "C" & (is.null(ref_crs) | is.na(ref_crs)) == F & (is.null(AOI_path) | is.na(AOI_path)) == T) {
     # Cropping each layer of ly
     AA <- unlist(strsplit(crs(ref_crs), " "))
     ll <- which(grepl("GEOG", AA[1]) == T)
@@ -763,7 +775,7 @@ wet_area <- function(wt_path, input_paths, NAval=0, out_path, AOI_path=wt_path, 
   }
 
   # Case D line 1 (line 3 does not exist in line C and D)
-  if (case == "D" & is.null(ref_crs) == T & is.null(AOI_path) == T) {
+  if (case == "D" & (is.null(ref_crs) | is.na(ref_crs)) == T & (is.null(AOI_path) | is.na(AOI_path)) == T) {
     message(paste("GAM4water is working on Projected reference system(epsg:", tab_crs$epsg[which.min(tab_crs$PROJ == 1)], ")."))
     warning("You have not set an AOI, procedure can be long especially if you're working with large raster. Consider setting an AOI")
 
@@ -823,7 +835,7 @@ wet_area <- function(wt_path, input_paths, NAval=0, out_path, AOI_path=wt_path, 
   }
 
   # Case D line 2
-  if (case == "D" & is.null(ref_crs) == T & is.null(AOI_path) == F) {
+  if (case == "D" & (is.null(ref_crs) | is.na(ref_crs)) == T & (is.null(AOI_path) | is.na(AOI_path)) == F) {
     message(paste("GAM4water will use the first raster's projected reference system available (epsg:", tab_crs$epsg[which.min(tab_crs$PROJ == 1)], ")."))
 
     # Homogenizing projection
@@ -891,7 +903,7 @@ wet_area <- function(wt_path, input_paths, NAval=0, out_path, AOI_path=wt_path, 
   }
 
   # Case D line 4
-  if (case == "D" & is.null(ref_crs) == F & is.null(AOI_path) == F) {
+  if (case == "D" & (is.null(ref_crs) | is.na(ref_crs)) == F & (is.null(AOI_path) | is.na(AOI_path)) == F) {
     AA <- unlist(strsplit(crs(ref_crs), " "))
     ll <- which(grepl("GEOG", AA[1]) == T)
     if (length(ll) > 0) {
@@ -958,7 +970,7 @@ wet_area <- function(wt_path, input_paths, NAval=0, out_path, AOI_path=wt_path, 
   }
 
   # Case D line 5
-  if (case == "D" & is.null(ref_crs) == F & is.null(AOI_path) == T) {
+  if (case == "D" & (is.null(ref_crs) | is.na(ref_crs)) == F & (is.null(AOI_path) | is.na(AOI_path)) == T) {
     # Cropping each layer of ly
     AA <- unlist(strsplit(crs(ref_crs), " "))
     ll <- which(grepl("GEOG", AA[1]) == T)
@@ -1264,6 +1276,9 @@ wet_area(
   wt_path = wt_polygon,
   input_paths = input_tiff,
   out_path = output_dir,
-  classID = c("w", "t"),  # Define water ('w') and non-water ('t')
+  AOI_path = AOI_path,
+  ref_crs = ref_crs,
+  classID = c("w", "t"),
   respl = "low"
 )
+
