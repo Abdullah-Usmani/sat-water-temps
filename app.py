@@ -1,7 +1,9 @@
 from flask import Flask, json, jsonify, send_file, render_template, abort
+from flask import Flask, json, jsonify, send_file, render_template, abort
 import os
 import io
 import re
+import pandas as pd
 import pandas as pd
 import numpy as np
 import rasterio
@@ -12,7 +14,7 @@ from PIL import Image
 app = Flask(__name__)
 
 # Define the external data directory
-root_folder = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\\"
+root_folder = r"C:\Users\ahmad\Documents\SEGP\\"
 
 BASE_PATH = "./Water Temp Sensors/ECOraw"  # Adjust path as needed
 
@@ -32,7 +34,7 @@ app.jinja_env.filters['extract_layer'] = extract_layer
 
 @app.route('/feature/<feature_id>')
 def feature_page(feature_id):
-    geojson_path = os.path.join(root_folder, 'sat-water-temps', 'static', 'polygons_new.geojson')  # Adjust path as needed
+    geojson_path = os.path.join(root_folder, 'sat-water-temps', 'static', 'polygons.geojson')  # Adjust path as needed
 
     # Load GeoJSON and find the lake feature
     with open(geojson_path, 'r') as f:
@@ -354,7 +356,46 @@ def multi_tif_to_png(tif_path):
         img_bytes.seek(0)
 
     return img_bytes
-  
+    
+@app.route('/serve_tif_as_png/<feature_id>/<filename>')
+def serve_tif_as_png(feature_id, filename):
+    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
+    tif_path = os.path.join(data_folder, filename)
+
+    if not os.path.exists(tif_path):
+        abort(404)
+
+    img_bytes = convert_tif_to_png(tif_path)
+    return send_file(img_bytes, mimetype='image/png')
+
+@app.route('/latest_lst_tif/<feature_id>/')  # Add route for serving .png files
+def get_latest_lst_tif(feature_id):
+    """Finds and returns the latest .tif file in the specified folder."""
+
+    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
+
+    filtered_files = [os.path.join(data_folder, file) for file in os.listdir(data_folder) if file.endswith('.tif')]
+
+    # Sort by modification time (newest first)
+    if filtered_files:
+        filtered_files.sort(key=os.path.getmtime, reverse=True)
+        img_bytes = multi_tif_to_png(filtered_files[0])
+        return send_file(img_bytes, mimetype='image/png')
+    
+    return None  # Return None if no .tif file is found
+
+@app.route('/download_tif/<feature_id>/<filename>')
+def download_tif(feature_id, filename):
+    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECOraw', feature_id, 'lake')
+    file_path = os.path.join(data_folder, filename)
+    
+    if os.path.exists(file_path):
+        return send_file(file_path, as_attachment=True)
+    else:
+        abort(404)
+@app.route('/feature/full-view')
+def full_view():
+    return render_template('full_view.html')
 
 if __name__ == "__main__":
     app.run(debug=True)

@@ -4,10 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ feature_id }} Details</title>
-
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * {
             margin: 0;
@@ -22,9 +21,9 @@
             background-color: #121212;
             color: #ffffff;
             overflow: hidden;
-            /* opacity: 0;
+            opacity: 0;
             transform: scale(0.9);
-            animation: fadeIn 0.5s forwards ease-out; */
+            animation: fadeIn 0.5s forwards ease-out;
         }
 
         @keyframes fadeIn {
@@ -46,18 +45,20 @@
         }
 
         #sidebar {
-            flex: 0.2;
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 350px;
+            height: 100vh;
             background: rgba(30, 30, 30, 0.9);
-            padding: 50px;
+            padding: 15px;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
             align-items: center;
             backdrop-filter: blur(10px);
             box-shadow: -4px 0 10px rgba(0, 0, 0, 0.3);
-            position: relative;
-            height: 100vh;
-            width: 100%;
+            z-index: 1000;
         }
 
         h2, a {
@@ -119,48 +120,216 @@
         }
 
         #color-selector-container {
+        #polygon-selector-container {
             position: absolute;
             top: 20px;
-            left: 60%;
-            transform: translateX(-40%);
+            left: 50%;
+            transform: translateX(-50%);
             background: rgba(30, 30, 30, 0.9);
             padding: 10px;
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
         }
 
-        #color-selector {
+        #polygon-selector {
             padding: 5px;
             border-radius: 5px;
             border: none;
-            background: #ffdebb;
+            background: #f9a44a;
             color: #121212;
             font-weight: bold;
             cursor: pointer;
         }
         
         #back-btn {
-                position: absolute;
-                top: 20px;
-                left: 20px;
-                background-color: #007BFF;
-                color: #fff;
-                padding: 25px 50px;
-                border: none;
-                border-radius: 10px;
-                cursor: pointer;
-                font-size: 20px;
-                font-weight: bold;
-                transition: background-color 0.3s;
-                z-index: 1000;
-            }
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background-color: #007BFF;
+            color: #fff;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+            z-index: 1000;
+        }
+
+        #back-btn:hover {
+            background-color: #0056b3;
+        }
+
+        #temperature-boxes {
+            width: 100%;
+            margin-top: 20px;
+            overflow-x: auto;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        #temperature-boxes table {
+            width: 100%;
+            color: white;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 13px;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        #temperature-boxes th {
+            padding: 12px 8px;
+            background: rgba(249, 164, 74, 0.8);
+            color: #121212;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+        }
+
+        #temperature-boxes td {
+            padding: 10px 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        #temperature-boxes tr:nth-child(even) {
+            background-color: rgba(255, 255, 255, 0.03);
+        }
+
+        #temperature-boxes tr:hover {
+            background-color: rgba(249, 164, 74, 0.15);
+        }
+
+        #temperature-boxes td:first-child {
+            font-weight: bold;
+            color: #f9a44a;
+        }
+
+        .graph-type-selector {
+            top: 10px;
+            left: 10px;
+            padding: 2px 4px;
+            border-radius: 4px;
+            background: rgba(249, 164, 74, 0.9);
+            color: #121212;
+            border: 1px solid rgba(0,0,0,0.2);
+            font-size: 7px;
+            height: 30px;
+            width: 70px;
+        }
+
+        #graph-container {
+            overflow: visible;
+            z-index: 1000;
+        }
+
+        #graph-container select {
+            z-index: 1002;
+        }
+        
+        .unit-selector {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .unit-selector button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            background-color: #f9a44a;
+            color: #121212;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .unit-selector button.active {
+            background-color: #007BFF;
+            color: #fff;
+        }
+
+        #graph-container {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 300px;
+            height: 600px;
+            background: rgba(30, 30, 30, 0.9);
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+        }
+
+        .graph-type-selector {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1001;
+            padding: 5px;
+            border-radius: 5px;
+            background: #f9a44a;
+            color: #121212;
+            border: none;
+            font-weight: bold;
+        }
+
+        #temperatureChart {
+            width: 100%;
+            height: 100%;
+        }
+
+        .date-container {
+            margin: 15px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .date-container label {
+            margin-bottom: 5px;
+        }
+
+        #date-selector {
+            padding: 5px;
+            border-radius: 5px;
+            border: none;
+            background: #f9a44a;
+            color: #121212;
+            font-weight: bold;
+        }
+
+        .view-all-btn {
+            background: rgba(66, 135, 245, 0.8);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+            margin-top: 10px;
+            width: 100%;
+        }
+
+        .view-all-btn:hover {
+            background: rgba(66, 135, 245, 1);
+        }
+        th, td {
+  border: 1px solid black;
+}
     </style>
 </head>
 <body>
     <div id="map-container">
         <div id="map"></div>
         <button id="back-btn" onclick="window.history.back();">Back</button>
-        <div class="footer">&copy; 2025 Water Temperature Monitoring Platform | All Rights Reserved</div>
     </div>
 
     <div id="polygon-selector-container">
@@ -168,155 +337,360 @@
         <select id="polygon-selector"></select>
     </div>
 
-    <div id="color-selector-container">
-        <label for="color-selector">Color Scale:</label>
-        <select id="color-selector"></select>
+    <div id="graph-container">
+        <select id="graph-type-selector" class="graph-type-selector" title="Select graph type">
+            <option value="line">Temperatures</option>
+            <option value="summary">Stats</option>
+            <option value="histogram">Distribution</option>
+            <option value="scatter">Latitude</option>
+        </select>
+        <canvas id="temperatureChart"></canvas>
     </div>
 
     <div id="sidebar">
         <h2>Temperature Data for <span id="location-name">{{ feature_id }}</span></h2>
-        <label for="date-selector" style="margin-bottom: 10px;">Select Date:</label>
-        <input type="date" id="date-selector" value="{{ latest_date }}" style="padding: 8px; width: 100%; border-radius: 5px;">
-        <div class="info-box" id="archive-box"><a href="/feature/{{ feature_id }}/archive">Archive</a></div>
-        <div class="info-box" id="temperature-boxes"></div>
+    
+        <div class="date-container">
+            <label for="date-selector">Select Date:</label>
+            <input type="date" id="date-selector" value="{{ latest_date }}">
+        </div>
+
+        <div class="unit-selector">
+            <button id="kelvin-btn" class="active" onclick="changeUnit('kelvin')">Kelvin</button>
+            <button id="celsius-btn" onclick="changeUnit('celsius')">Celsius</button>
+            <button id="fahrenheit-btn" onclick="changeUnit('fahrenheit')">Fahrenheit</button>
+        </div>
+    
+        <div id="temperature-boxes">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Point</th>
+                        <th>Latitude</th>
+                        <th>Longitude</th>
+                        <th id="temp-header">Temp (K)</th>
+                    </tr>
+                </thead>
+                <tbody id="temperature-table-body"></tbody>
+            </table>
+            <button id="view-more-btn" class="view-all-btn">View More Data</button>
+        </div>
+    
+        <div class="info-box" id="archive-box">
+            <a href="/feature/{{ feature_id }}/archive">Archive</a>
+        </div>
     </div>
-
+    
     <script>
-        document.getElementById('location-name').innerText = "{{ feature_id }}";
-        console.log("Feature ID:", "{{ feature_id }}");
+        // Initialize variables
+        let map;
+        let currentUnit = 'kelvin';
+        let temperatureData = [];
+        let tempChart = null;
+        const initialDisplayCount = 10;
 
-        const map = L.map('map', {
-            center: [2.5, 112.5],
-            zoom: 10,
-            minZoom: 10,
-            zoomControl: false
+        // Initialize the application when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeMap();
+            initializeEventListeners();
+            fetchTemperatureData();
         });
 
-        L.control.zoom({ position: 'bottomright' }).addTo(map);
-
-        const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            attribution: 'Tiles &copy; Esri, Maxar, Earthstar Geographics, and the GIS User Community'
-        }).addTo(map);
-
-        const coords = JSON.parse('{{ coords|safe }}');
-        let overlay = null; // Store reference to overlay for later removal
-    
-        if (Array.isArray(coords) && Array.isArray(coords[0])) {
-            const latLngs = coords[0].map(coord => [coord[1], coord[0]]);
-            const polygon = L.polygon(latLngs, {
-                color: '#8abbff',
-                opacity: 0.05,
-                weight: 2,
-            }).addTo(map);
-            map.fitBounds(polygon.getBounds());
-            map.setMaxBounds(polygon.getBounds());
-
-            // Initial overlay
-            overlay = L.imageOverlay("{{ url_for('get_latest_lst_tif', feature_id=feature_id) }}", polygon.getBounds()).addTo(map);
-
-            map.on('zoomend', function() {
-                polygon.setStyle({
-                    weight: 2 + map.getZoom() * 0.2,
-                    opacity: 0.05 + (map.getZoom() - 10) * 0.02
-                });
+        function initializeMap() {
+            map = L.map('map', {
+                center: [2.5, 112.5],
+                zoom: 10,
+                minZoom: 10,
+                zoomControl: false
             });
-                // Fetch available dates and update overlay on change
-                fetch('/feature/{{ feature_id }}/tif_dates')
-                    .then(response => response.json())
-                    .then(dates => {
-                        const selector = document.getElementById('polygon-selector');
-                        dates.forEach(date => {
-                            const option = document.createElement('option');
-                            option.value = date;
-                            option.textContent = date;
-                            selector.appendChild(option);
-                        });
 
+            L.control.zoom({ position: 'bottomright' }).addTo(map);
 
+            const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri, Maxar, Earthstar Geographics, and the GIS User Community'
+            }).addTo(map);
 
+            const coords = JSON.parse('{{ coords|safe }}');
+            if (Array.isArray(coords) && Array.isArray(coords[0])) {
+                const latLngs = coords[0].map(coord => [coord[1], coord[0]]);
+                const polygon = L.polygon(latLngs, {
+                    color: '#8abbff',
+                    opacity: 0.05,
+                    weight: 2,
+                }).addTo(map);
+                map.fitBounds(polygon.getBounds());
+                map.setMaxBounds(polygon.getBounds());
 
-                        selector.addEventListener('change', function() {
-                            const newOverlayUrl = `/feature/{{ feature_id }}/doy/${this.value}`;
+                const overlay = L.imageOverlay("{{ url_for('get_latest_lst_tif', feature_id=feature_id) }}", polygon.getBounds()).addTo(map);
 
-                            // Remove existing overlay if present
-                            if (overlay) {
-                                map.removeLayer(overlay);
-                            }
-
-                            // Add new overlay and update reference
-                            overlay = L.imageOverlay(newOverlayUrl, polygon.getBounds()).addTo(map);
-                        });
+                map.on('zoomend', function() {
+                    polygon.setStyle({
+                        weight: 2 + map.getZoom() * 0.2,
+                        opacity: 0.05 + (map.getZoom() - 10) * 0.02
                     });
+                });
             } else {
                 console.error("Invalid coordinates format:", coords);
+            }
         }
-        
-        // Fetch and display temperature data
-        function fetchTemperatureData() {
-        fetch(`/feature/{{ feature_id }}/temperature`)
-            .then(response => response.json())
-            .then(data => {
+
+        function initializeEventListeners() {
+            document.getElementById('graph-type-selector').addEventListener('change', function(e) {
+                updateChart();
+            });
+
+            document.getElementById('date-selector').addEventListener('change', function(e) {
+                fetchTemperatureData();
+            });
+
+            document.getElementById('view-more-btn').addEventListener('click', function() {
+                openFullDataWindow();
+            });
+        }
+        function openFullDataWindow() {
+    if (temperatureData.length === 0) {
+        alert("No temperature data available.");
+        return;
+    }
+
+    const date = document.getElementById('date-selector').value;
+    const unit = currentUnit;
+    
+    // Encode data to pass it through the URL
+    const encodedData = encodeURIComponent(JSON.stringify(temperatureData));
+    const url = `/feature/full-view?data=${encodedData}&unit=${unit}`;
+
+    // Window size
+    const width = 800;
+    const height = 800;
+
+    // Calculate position for centering the window
+    const left = (screen.width - width) / 2;
+    const top = (screen.height - height) / 2;
+
+    // Open new window in the center
+    window.open(url, '_blank', `width=${width}, height=${height}, left=${left}, top=${top}, menubar=no, location=no, resizable=yes, scrollbars=yes, status=no, toolbar=no`);
+}
+
+
+        // Temperature conversion functions
+        function convertTemperature(tempKelvin, unit) {
+            if (unit === 'celsius') {
+                return (tempKelvin - 273.15).toFixed(2);
+            } else if (unit === 'fahrenheit') {
+                return ((tempKelvin - 273.15) * 9/5 + 32).toFixed(2);
+            }
+            return tempKelvin.toFixed(2); // Default to Kelvin
+        }
+
+        function getUnitSymbol() {
+            return currentUnit === 'kelvin' ? 'K' : 
+                   currentUnit === 'celsius' ? '°C' : '°F';
+        }
+
+        function changeUnit(unit) {
+            currentUnit = unit;
+            
+            // Update active button state
+            document.getElementById('kelvin-btn').classList.remove('active');
+            document.getElementById('celsius-btn').classList.remove('active');
+            document.getElementById('fahrenheit-btn').classList.remove('active');
+            document.getElementById(`${unit}-btn`).classList.add('active');
+            
+            updateDisplay();
+        }
+
+        // Data fetching
+        async function fetchTemperatureData() {
+            const date = document.getElementById('date-selector').value;
+            try {
+                const response = await fetch(`/feature/{{ feature_id }}/temperature?date=${date}`);
+                const data = await response.json();
+                
                 if (data.error) {
-                    console.error(data.error);
-                    return;
+                    throw new Error(data.error);
                 }
 
-                const tableContainer = document.getElementById('temperature-boxes');
-                tableContainer.innerHTML = ""; // Clear previous data
-
-                // Create table element
-                const table = document.createElement('table');
-                table.style.width = '100%';
-                table.style.borderCollapse = 'collapse';
-
-                // Create table header
-                const headerRow = document.createElement('tr');
-                headerRow.innerHTML = `
-                    <th style="padding: 8px; border-bottom: 1px solid #fff;">Latitude</th>
-                    <th style="padding: 8px; border-bottom: 1px solid #fff;">Longitude</th>
-                    <th style="padding: 8px; border-bottom: 1px solid #fff;">Temperature (K)</th>
-                `;
-                table.appendChild(headerRow);
-
-                data.forEach(point => {
-                    const { x, y, LST_filter } = point;
-
-                    // Convert to Kelvin
-                    const tempKelvin = (parseFloat(LST_filter)).toFixed(2);
-
-                    const lat = parseFloat(y);
-                    const lng = parseFloat(x);
-
-                    if (isNaN(lat) || isNaN(lng) || isNaN(tempKelvin)) {
-                        console.warn("Invalid data point:", point);
-                        return;
-                    }
-
-                    // Add marker to the map
-                    L.circleMarker([lat, lng], {
-                        radius: 6,
-                        color: '#f9a44a',
-                        fillColor: '#f9a44a',
-                        fillOpacity: 0.8
-                    })
-                    .bindPopup(`<strong>Temp:</strong> ${tempKelvin} K`)
-                    .addTo(map);
-
-                    // Create table row
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td style="padding: 8px; border-bottom: 1px solid #fff;">${lat.toFixed(4)}</td>
-                        <td style="padding: 8px; border-bottom: 1px solid #fff;">${lng.toFixed(4)}</td>
-                        <td style="padding: 8px; border-bottom: 1px solid #fff;">${tempKelvin}</td>
-                    `;
-                    table.appendChild(row);
-                });
-
-                tableContainer.appendChild(table);
-            })
-            .catch(error => console.error("Error fetching temperature data:", error));
+                temperatureData = Array.isArray(data) ? data : [];
+                updateDisplay();
+            } catch (error) {
+                console.error("Error fetching temperature data:", error);
+                document.getElementById('temperature-boxes').innerHTML = 
+                    `<div class="box">Error loading data: ${error.message}</div>`;
+            }
         }
-        fetchTemperatureData();
+
+        // Display functions
+        function updateDisplay() {
+            updateTable();
+            updateChart();
+        }
+
+        function updateTable() {
+            const tableBody = document.getElementById('temperature-table-body');
+            
+            if (!tableBody) return;
+            
+            if (temperatureData.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">No temperature data available</td></tr>';
+                return;
+            }
+
+            // Clear existing rows
+            tableBody.innerHTML = '';
+            
+            // Show only initial points
+            const displayCount = Math.min(initialDisplayCount, temperatureData.length);
+            
+            // Add rows
+            for (let i = 0; i < displayCount; i++) {
+                const point = temperatureData[i];
+                const tempKelvin = parseFloat(point.LST_filter || point.temperature || 0);
+                const lat = parseFloat(point.y || point.latitude || 0).toFixed(4);
+                const lng = parseFloat(point.x || point.longitude || 0).toFixed(4);
+                const temp = convertTemperature(tempKelvin, currentUnit);
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${i + 1}</td>
+                    <td>${lat}</td>
+                    <td>${lng}</td>
+                    <td>${temp}</td>
+                `;
+                tableBody.appendChild(row);
+            }
+        }
+
+        function updateChart() {
+            const graphType = document.getElementById('graph-type-selector').value;
+            const ctx = document.getElementById('temperatureChart').getContext('2d');
+            
+            if (tempChart) {
+                tempChart.destroy();
+            }
+
+            if (temperatureData.length === 0) {
+                return;
+            }
+
+            const tempsKelvin = temperatureData.map(p => parseFloat(p.LST_filter || p.temperature || 0));
+            const temperatures = tempsKelvin.map(t => parseFloat(convertTemperature(t, currentUnit)));
+            const labels = temperatureData.map((_, i) => `Point ${i + 1}`);
+            const latitudes = temperatureData.map(p => parseFloat(p.y || p.latitude || 0));
+
+            let config = {
+                type: 'line',
+                data: { labels, datasets: [] },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { title: { display: true, text: 'Data Points' } },
+                        y: { title: { display: true, text: `Temperature (${getUnitSymbol()})` } }
+                    }
+                }
+            };
+
+            switch(graphType) {
+                case 'line':
+                    config.data.datasets.push({
+                        label: `Temperature (${getUnitSymbol()})`,
+                        data: temperatures,
+                        borderColor: '#ff7f0e',
+                        backgroundColor: 'rgba(255, 127, 14, 0.2)',
+                        borderWidth: 2,
+                        fill: true
+                    });
+                    break;
+
+                case 'summary':
+                    config.type = 'bar';
+                    config.data.labels = ['Min', 'Max', 'Avg'];
+                    config.data.datasets.push({
+                        label: 'Statistics',
+                        data: [
+                            Math.min(...temperatures),
+                            Math.max(...temperatures),
+                            temperatures.reduce((a, b) => a + b, 0) / temperatures.length
+                        ],
+                        backgroundColor: ['#4CAF50', '#F44336', '#2196F3']
+                    });
+                    break;
+
+                case 'histogram':
+                    config.type = 'bar';
+                    const histogramData = createHistogramData(temperatures, 5);
+                    config.data.labels = histogramData.labels;
+                    config.data.datasets.push({
+                        label: 'Temperature Distribution',
+                        data: histogramData.values,
+                        backgroundColor: '#9C27B0'
+                    });
+                    break;
+
+                case 'scatter':
+                    config.type = 'scatter';
+                    config.data.datasets.push({
+                        label: 'Temperature vs Latitude',
+                        data: latitudes.map((lat, i) => ({x: lat, y: temperatures[i]})),
+                        backgroundColor: '#00BCD4',
+                        pointRadius: 5
+                    });
+                    config.options.scales.x.title.text = 'Latitude';
+                    break;
+            }
+
+            tempChart = new Chart(ctx, config);
+        }
+
+        function createHistogramData(values, binCount) {
+            const min = Math.min(...values);
+            const max = Math.max(...values);
+            const binSize = (max - min) / binCount;
+            
+            const bins = Array(binCount).fill(0);
+            const labels = [];
+            
+            for (let i = 0; i < binCount; i++) {
+                const binStart = min + i * binSize;
+                const binEnd = binStart + binSize;
+                labels.push(`${binStart.toFixed(1)} - ${binEnd.toFixed(1)}`);
+            }
+
+            values.forEach(value => {
+                let binIndex = Math.floor((value - min) / binSize);
+                binIndex = Math.min(binIndex, binCount - 1);
+                bins[binIndex]++;
+            });
+
+            return {
+                labels: labels,
+                values: bins
+            };
+        }
+        function changeUnit(unit) {
+    currentUnit = unit;
+    
+    // Update active button state
+    document.getElementById('kelvin-btn').classList.remove('active');
+    document.getElementById('celsius-btn').classList.remove('active');
+    document.getElementById('fahrenheit-btn').classList.remove('active');
+    document.getElementById(`${unit}-btn`).classList.add('active');
+    
+    // Update temperature header
+    const unitSymbol = getUnitSymbol();
+    document.getElementById('temp-header').textContent = `Temp (${unitSymbol})`;
+    
+    updateDisplay();
+}
+function switchHeader(newHeader) {
+    // Remove active class from all headers
+    document.querySelectorAll('.header').forEach(header => {
+        header.classList.remove('active-header');
+    });
+
+    // Add active class to the selected header
+    newHeader.classList.add('active-header');
+}
     </script>
-</body>
 </html>
