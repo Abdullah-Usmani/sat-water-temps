@@ -120,6 +120,26 @@
         }
 
         #color-selector-container {
+            position: absolute;
+            top: 20px;
+            left: 60%;
+            transform: translateX(-40%);
+            background: rgba(30, 30, 30, 0.9);
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        #color-selector {
+            padding: 5px;
+            border-radius: 5px;
+            border: none;
+            background: #ffdebb;
+            color: #121212;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
         #polygon-selector-container {
             position: absolute;
             top: 20px;
@@ -337,6 +357,11 @@
         <select id="polygon-selector"></select>
     </div>
 
+    <div id="color-selector-container">
+        <label for="color-selector">Color Scale:</label>
+        <select id="color-selector"></select>
+    </div>
+
     <div id="graph-container">
         <select id="graph-type-selector" class="graph-type-selector" title="Select graph type">
             <option value="line">Temperatures</option>
@@ -384,6 +409,8 @@
     <script>
         // Initialize variables
         let map;
+        let overlay = null; // Declare overlay variable
+        let polygon = null; // Declare polygon in a higher scope
         let currentUnit = 'kelvin';
         let temperatureData = [];
         let tempChart = null;
@@ -391,9 +418,10 @@
 
         // Initialize the application when DOM is loaded
         document.addEventListener('DOMContentLoaded', function() {
+            initializeDates();
             initializeMap();
+            initializeTemperatureData();
             initializeEventListeners();
-            fetchTemperatureData();
         });
 
         function initializeMap() {
@@ -413,7 +441,7 @@
             const coords = JSON.parse('{{ coords|safe }}');
             if (Array.isArray(coords) && Array.isArray(coords[0])) {
                 const latLngs = coords[0].map(coord => [coord[1], coord[0]]);
-                const polygon = L.polygon(latLngs, {
+                polygon = L.polygon(latLngs, {
                     color: '#8abbff',
                     opacity: 0.05,
                     weight: 2,
@@ -439,39 +467,40 @@
                 updateChart();
             });
 
-            document.getElementById('date-selector').addEventListener('change', function(e) {
-                fetchTemperatureData();
+            document.getElementById('polygon-selector').addEventListener('change', function() {
+                updateOverlay();
+                updateTemperatureData();
             });
 
             document.getElementById('view-more-btn').addEventListener('click', function() {
                 openFullDataWindow();
             });
         }
+
         function openFullDataWindow() {
-    if (temperatureData.length === 0) {
-        alert("No temperature data available.");
-        return;
-    }
+            if (temperatureData.length === 0) {
+                alert("No temperature data available.");
+                return;
+            }
 
-    const date = document.getElementById('date-selector').value;
-    const unit = currentUnit;
-    
-    // Encode data to pass it through the URL
-    const encodedData = encodeURIComponent(JSON.stringify(temperatureData));
-    const url = `/feature/full-view?data=${encodedData}&unit=${unit}`;
+            const date = document.getElementById('date-selector').value;
+            const unit = currentUnit;
+            
+            // Encode data to pass it through the URL
+            const encodedData = encodeURIComponent(JSON.stringify(temperatureData));
+            const url = `/feature/full-view?data=${encodedData}&unit=${unit}`;
 
-    // Window size
-    const width = 800;
-    const height = 800;
+            // Window size
+            const width = 800;
+            const height = 800;
 
-    // Calculate position for centering the window
-    const left = (screen.width - width) / 2;
-    const top = (screen.height - height) / 2;
+            // Calculate position for centering the window
+            const left = (screen.width - width) / 2;
+            const top = (screen.height - height) / 2;
 
-    // Open new window in the center
-    window.open(url, '_blank', `width=${width}, height=${height}, left=${left}, top=${top}, menubar=no, location=no, resizable=yes, scrollbars=yes, status=no, toolbar=no`);
-}
-
+            // Open new window in the center
+            window.open(url, '_blank', `width=${width}, height=${height}, left=${left}, top=${top}, menubar=no, location=no, resizable=yes, scrollbars=yes, status=no, toolbar=no`);
+        }
 
         // Temperature conversion functions
         function convertTemperature(tempKelvin, unit) {
@@ -501,22 +530,81 @@
         }
 
         // Data fetching
-        async function fetchTemperatureData() {
-            const date = document.getElementById('date-selector').value;
-            try {
-                const response = await fetch(`/feature/{{ feature_id }}/temperature?date=${date}`);
-                const data = await response.json();
-                
-                if (data.error) {
-                    throw new Error(data.error);
-                }
+        // Fetch available dates and update overlay on change
 
-                temperatureData = Array.isArray(data) ? data : [];
-                updateDisplay();
+        function initializeDates() {
+            fetch('/feature/{{ feature_id }}/get_dates')
+                .then(response => response.json())
+                .then(dates => {
+                    const selector = document.getElementById('polygon-selector');
+                    dates.forEach(date => {
+                        const option = document.createElement('option');
+                        option.value = date;
+                        option.textContent = date;
+                        selector.appendChild(option);
+                    });
+                });
+        }
+                
+        function updateOverlay() {
+                    const date = document.getElementById('polygon-selector').value;
+                    const newOverlayUrl = `/feature/{{ feature_id }}/tif/${date}`;
+
+                    map.eachLayer(function(layer) {
+                        if (layer instanceof L.ImageOverlay) {
+                            map.removeLayer(layer);
+                        }
+                    });
+
+                    // Add new overlay and update reference
+                    overlay = L.imageOverlay(newOverlayUrl, polygon.getBounds()).addTo(map);
+                }
+                
+        async function updateTemperatureData() {
+            const date = document.getElementById('polygon-selector').value;
+            try {
+            const response = await fetch(`/feature/{{ feature_id }}/temperature/${date}`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json(); // Await the JSON parsing
+            
+            if (data.error) {
+                throw new Error(data.error);
+            }
+
+            // Ensure data is an array and has valid entries
+            temperatureData = Array.isArray(data) && data.length > 0 ? data : [];
+            
+            if (temperatureData.length === 0) {
+                console.warn("No temperature data available for the selected date.");
+            }
+            updateDisplay();
             } catch (error) {
-                console.error("Error fetching temperature data:", error);
-                document.getElementById('temperature-boxes').innerHTML = 
-                    `<div class="box">Error loading data: ${error.message}</div>`;
+            console.error("Error fetching temperature data:", error);
+            alert(`Error fetching temperature data: ${error.message}`);
+            document.getElementById('temperature-boxes').innerHTML = 
+                `<div class="box">Error loading data: ${error.message}</div>`;
+            }
+        }
+
+        async function initializeTemperatureData() {
+            try {
+            const response = await fetch(`/feature/{{ feature_id }}/temperature`);
+            const data = await response.json();
+
+            if (data.error) {
+                throw new Error(data.error);
+            }
+
+            temperatureData = Array.isArray(data) ? data : [];
+            updateDisplay();
+            } catch (error) {
+            console.error("Error fetching temperature data:", error);
+            document.getElementById('temperature-boxes').innerHTML = 
+                `<div class="box">Error loading data: ${error.message}</div>`;
             }
         }
 
@@ -669,28 +757,30 @@
             };
         }
         function changeUnit(unit) {
-    currentUnit = unit;
-    
-    // Update active button state
-    document.getElementById('kelvin-btn').classList.remove('active');
-    document.getElementById('celsius-btn').classList.remove('active');
-    document.getElementById('fahrenheit-btn').classList.remove('active');
-    document.getElementById(`${unit}-btn`).classList.add('active');
-    
-    // Update temperature header
-    const unitSymbol = getUnitSymbol();
-    document.getElementById('temp-header').textContent = `Temp (${unitSymbol})`;
-    
-    updateDisplay();
-}
-function switchHeader(newHeader) {
-    // Remove active class from all headers
-    document.querySelectorAll('.header').forEach(header => {
-        header.classList.remove('active-header');
-    });
+            currentUnit = unit;
+            
+            // Update active button state
+            document.getElementById('kelvin-btn').classList.remove('active');
+            document.getElementById('celsius-btn').classList.remove('active');
+            document.getElementById('fahrenheit-btn').classList.remove('active');
+            document.getElementById(`${unit}-btn`).classList.add('active');
+            
+            // Update temperature header
+            const unitSymbol = getUnitSymbol();
+            document.getElementById('temp-header').textContent = `Temp (${unitSymbol})`;
+            
+            updateDisplay();
+        }
 
-    // Add active class to the selected header
-    newHeader.classList.add('active-header');
-}
+        function switchHeader(newHeader) {
+            // Remove active class from all headers
+            document.querySelectorAll('.header').forEach(header => {
+                header.classList.remove('active-header');
+            });
+
+            // Add active class to the selected header
+            newHeader.classList.add('active-header');
+        }
     </script>
+</body>
 </html>

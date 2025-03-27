@@ -76,40 +76,6 @@ def feature_archive(feature_id):
     
     return render_template('feature_archive.html', feature_id=feature_id, tif_files=tif_files)
 
-@app.route('/feature/<feature_id>/temperature')
-def get_temperature(feature_id):
-    data_folder = f"ECO/{feature_id}/lake"
-    try:
-        files = supabase.storage.from_(bucket_name).list(data_folder)
-        csv_files = [file['name'] for file in files if file['name'].endswith('.csv')]
-    except Exception as e:
-        csv_files = []
-        print("Error fetching .csv files:", e)
-
-    if not csv_files:
-        return jsonify({"error": "No CSV files found"}), 404
-
-    # Assuming the CSV files are sorted by some naming convention, not modification time
-    csv_files.sort()  # Sort alphabetically or by naming convention
-    csv_path = f"{data_folder}/{csv_files[0]}"  # Use the first CSV file
-
-    try:
-        response = supabase.storage.from_(bucket_name).download(csv_path)
-        csv_data = response.decode("utf-8")
-        df = pd.read_csv(io.StringIO(csv_data))
-    except Exception as e:
-        print("Error reading CSV file:", e)
-        return jsonify({"error": "Failed to read CSV file"}), 500
-
-    if not {'x', 'y', 'LST_filter'}.issubset(df.columns):
-        return jsonify({"error": "CSV file missing required columns"}), 400
-
-    temp_data = df[['x', 'y', 'LST_filter']].dropna()
-
-    if temp_data.empty:
-        return jsonify({"error": "No data found"}), 404
-
-    return temp_data.to_json(orient='records')
   
 @app.route('/serve_tif_as_png/<feature_id>/<filename>')
 def serve_tif_as_png(feature_id, filename):
@@ -150,7 +116,43 @@ def get_latest_lst_tif(feature_id):
 
     abort(404)  # No .tif files found
 
-@app.route('/feature/<feature_id>/tif_dates')
+@app.route('/feature/<feature_id>/temperature')
+def get_latest_temperature(feature_id):
+    data_folder = f"ECO/{feature_id}/lake"
+    try:
+        files = supabase.storage.from_(bucket_name).list(data_folder)
+        csv_files = [file['name'] for file in files if file['name'].endswith('.csv')]
+    except Exception as e:
+        csv_files = []
+        print("Error fetching .csv files:", e)
+
+    if not csv_files:
+        return jsonify({"error": "No CSV files found"}), 404
+
+    # Assuming the CSV files are sorted by some naming convention, not modification time
+    csv_files.sort()  # Sort alphabetically or by naming convention
+    csv_path = f"{data_folder}/{csv_files[0]}"  # Use the first CSV file
+
+    try:
+        response = supabase.storage.from_(bucket_name).download(csv_path)
+        csv_data = response.decode("utf-8")
+        df = pd.read_csv(io.StringIO(csv_data))
+    except Exception as e:
+        print("Error reading CSV file:", e)
+        return jsonify({"error": "Failed to read CSV file"}), 500
+
+    if not {'x', 'y', 'LST_filter'}.issubset(df.columns):
+        return jsonify({"error": "CSV file missing required columns"}), 400
+
+    temp_data = df[['x', 'y', 'LST_filter']].dropna()
+
+    if temp_data.empty:
+        return jsonify({"error": "No data found"}), 404
+
+    return temp_data.to_json(orient='records')
+
+
+@app.route('/feature/<feature_id>/get_dates')
 def get_doys(feature_id):
     data_folder = f"ECO/{feature_id}/lake"
     try:
@@ -163,7 +165,7 @@ def get_doys(feature_id):
     doys = get_updated_dates(tif_files)  # Assuming extract_metadata returns a dictionary with 'DOY'
     return jsonify(sorted(doys))
 
-@app.route('/feature/<feature_id>/doy/<doy>')
+@app.route('/feature/<feature_id>/tif/<doy>')
 def get_tif_by_doy(feature_id, doy):
     data_folder = f"ECO/{feature_id}/lake"
     try:    
@@ -184,6 +186,39 @@ def get_tif_by_doy(feature_id, doy):
             return send_file(img_bytes, mimetype='image/png')
         
     abort(404)  # No matching DOY found
+
+@app.route('/feature/<feature_id>/temperature/<doy>')
+def get_temperature_by_doy(feature_id, doy):
+    data_folder = f"ECO/{feature_id}/lake"
+    try:    
+        files = supabase.storage.from_(bucket_name).list(data_folder)
+        csv_files = [file['name'] for file in files if file['name'].endswith('.csv')]
+    except Exception as e:
+        csv_files = []
+        print("Error fetching .tif files:", e)
+
+    for csv_file in csv_files:
+        metadata = extract_metadata(csv_file)
+        if metadata[1] == doy:
+            # Construct the virtual path for the .csv file
+            csv_path = f"{data_folder}/{csv_file}"
+            try:
+                response = supabase.storage.from_(bucket_name).download(csv_path)
+                csv_data = response.decode("utf-8")
+                df = pd.read_csv(io.StringIO(csv_data))
+            except Exception as e:
+                print("Error reading CSV file:", e)
+                return jsonify({"error": "Failed to read CSV file"}), 500
+
+            if not {'x', 'y', 'LST_filter'}.issubset(df.columns):
+                return jsonify({"error": "CSV file missing required columns"}), 400
+
+            temp_data = df[['x', 'y', 'LST_filter']].dropna()
+
+            if temp_data.empty:
+                return jsonify({"error": "No data found"}), 404
+
+            return temp_data.to_json(orient='records')
 
 @app.route('/download_tif/<feature_id>/<filename>')
 def download_tif(feature_id, filename):
