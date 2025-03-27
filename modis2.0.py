@@ -211,17 +211,6 @@ def download_results(task_id, headers):
             new_file_name = f"{base_name}_{timestamp}{ext}"  # Append timestamp before extension
             local_filename = os.path.join(raw_path, new_file_name)  # Save directly to the base folder
 
-            # print(f"Downloading to base folder: {local_filename}")
-
-            download_url = f"{url}/{file_id}"
-            download_response = requests.get(download_url, headers=headers, stream=True, allow_redirects=True)
-
-            with open(local_filename, 'wb') as f:
-                for chunk in download_response.iter_content(chunk_size=8192):
-                    f.write(chunk)
-
-            new_files.append(local_filename)  # Track newly downloaded file
-            print(f"Downloaded {local_filename}")
 
 # Function to extract aid number and date from filename
 def extract_metadata(filename):
