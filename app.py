@@ -14,9 +14,10 @@ from PIL import Image
 app = Flask(__name__)
 
 # Define the external data directory
-root_folder = r"C:\Users\ahmad\Documents\SEGP\\"
+root_folder = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\\"
 
 BASE_PATH = "./Water Temp Sensors/ECOraw"  # Adjust path as needed
+
 
 GLOBAL_MIN = 273  # Kelvin
 GLOBAL_MAX = 308  # Kelvin
@@ -63,28 +64,6 @@ def feature_archive(feature_id):
     
     return render_template('feature_archive.html', feature_id=feature_id, tif_files=tif_files)
 
-@app.route('/feature/<feature_id>/temperature')
-def get_temperature(feature_id):
-    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
-    csv_files = [os.path.join(data_folder, file) for file in os.listdir(data_folder) if file.endswith('.csv')]
-
-    if not csv_files:
-        return jsonify({"error": "No CSV files found"}), 404
-
-    csv_files.sort(key=os.path.getmtime, reverse=True)
-    csv_path = csv_files[0]
-    
-    df = pd.read_csv(csv_path)
-    if not {'x', 'y', 'LST_filter'}.issubset(df.columns):
-        return jsonify({"error": "CSV file missing required columns"}), 400
-
-    temp_data = df[['x', 'y', 'LST_filter']].dropna()
-    
-    if temp_data.empty:
-        return jsonify({"error": "No data found"}), 404
-    
-    return temp_data.to_json(orient='records')
-
 @app.route('/serve_tif_as_png/<feature_id>/<filename>')
 def serve_tif_as_png(feature_id, filename):
     data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
@@ -112,7 +91,30 @@ def get_latest_lst_tif(feature_id):
     
     return None  # Return None if no .tif file is found
 
-@app.route('/feature/<feature_id>/tif_dates')
+    
+@app.route('/feature/<feature_id>/temperature')
+def get_latest_temperature(feature_id):
+    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
+    csv_files = [os.path.join(data_folder, file) for file in os.listdir(data_folder) if file.endswith('.csv')]
+
+    if not csv_files:
+        return jsonify({"error": "No CSV files found"}), 404
+
+    csv_files.sort(key=os.path.getmtime, reverse=True)
+    csv_path = csv_files[0]
+    
+    df = pd.read_csv(csv_path)
+    if not {'x', 'y', 'LST_filter'}.issubset(df.columns):
+        return jsonify({"error": "CSV file missing required columns"}), 400
+
+    temp_data = df[['x', 'y', 'LST_filter']].dropna()
+    
+    if temp_data.empty:
+        return jsonify({"error": "No data found"}), 404
+    
+    return temp_data.to_json(orient='records')
+
+@app.route('/feature/<feature_id>/get_dates')
 def get_doys(feature_id):
     data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
     if not os.path.isdir(data_folder):
@@ -122,7 +124,7 @@ def get_doys(feature_id):
     doys = get_updated_dates(tif_files)  # Assuming extract_metadata returns a dictionary with 'DOY'
     return jsonify(sorted(doys))
 
-@app.route('/feature/<feature_id>/doy/<doy>')
+@app.route('/feature/<feature_id>/tif/<doy>')
 def get_tif_by_doy(feature_id, doy):
     data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
     tif_files = [f for f in os.listdir(data_folder) if f.endswith('.tif')]
@@ -136,6 +138,26 @@ def get_tif_by_doy(feature_id, doy):
 
     abort(404)  # No matching DOY found
 
+@app.route('/feature/<feature_id>/temperature/<doy>')
+def get_temperature_by_doy(feature_id, doy):
+    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
+    csv_files = [os.path.join(data_folder, file) for file in os.listdir(data_folder) if file.endswith('.csv')]
+
+    for csv_file in csv_files:
+        metadata = extract_metadata(csv_file)
+        if metadata[1] == doy:
+            csv_path = os.path.join(data_folder, csv_file)
+            df = pd.read_csv(csv_path)
+            if not {'x', 'y', 'LST_filter'}.issubset(df.columns):
+                return jsonify({"error": "CSV file missing required columns"}), 400
+
+            temp_data = df[['x', 'y', 'LST_filter']].dropna()
+            
+            if temp_data.empty:
+                return jsonify({"error": "No data found"}), 404
+            
+            return temp_data.to_json(orient='records')
+            
 @app.route('/download_tif/<feature_id>/<filename>')
 def download_tif(feature_id, filename):
     data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECOraw', feature_id, 'lake')
@@ -356,43 +378,7 @@ def multi_tif_to_png(tif_path):
         img_bytes.seek(0)
 
     return img_bytes
-    
-@app.route('/serve_tif_as_png/<feature_id>/<filename>')
-def serve_tif_as_png(feature_id, filename):
-    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
-    tif_path = os.path.join(data_folder, filename)
 
-    if not os.path.exists(tif_path):
-        abort(404)
-
-    img_bytes = convert_tif_to_png(tif_path)
-    return send_file(img_bytes, mimetype='image/png')
-
-@app.route('/latest_lst_tif/<feature_id>/')  # Add route for serving .png files
-def get_latest_lst_tif(feature_id):
-    """Finds and returns the latest .tif file in the specified folder."""
-
-    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
-
-    filtered_files = [os.path.join(data_folder, file) for file in os.listdir(data_folder) if file.endswith('.tif')]
-
-    # Sort by modification time (newest first)
-    if filtered_files:
-        filtered_files.sort(key=os.path.getmtime, reverse=True)
-        img_bytes = multi_tif_to_png(filtered_files[0])
-        return send_file(img_bytes, mimetype='image/png')
-    
-    return None  # Return None if no .tif file is found
-
-@app.route('/download_tif/<feature_id>/<filename>')
-def download_tif(feature_id, filename):
-    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECOraw', feature_id, 'lake')
-    file_path = os.path.join(data_folder, filename)
-    
-    if os.path.exists(file_path):
-        return send_file(file_path, as_attachment=True)
-    else:
-        abort(404)
 @app.route('/feature/full-view')
 def full_view():
     return render_template('full_view.html')
