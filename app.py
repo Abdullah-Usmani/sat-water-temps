@@ -213,6 +213,9 @@ def download_tif(feature_id, filename):
         return send_file(file_path, as_attachment=True)
     else:
         abort(404)
+@app.route('/feature/full-view')
+def full_view():
+    return render_template('full_view.html')
 
 if __name__ == "__main__":
     app.run(debug=True)
