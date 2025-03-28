@@ -162,7 +162,7 @@ def get_doys(feature_id):
         print("Error fetching .tif files:", e)
 
     doys = get_updated_dates(tif_files)  # Assuming extract_metadata returns a dictionary with 'DOY'
-    return jsonify(sorted(doys))
+    return jsonify(list(reversed(doys)))
 
 @app.route('/feature/<feature_id>/tif/<doy>')
 def get_tif_by_doy(feature_id, doy):
@@ -219,6 +219,21 @@ def get_temperature_by_doy(feature_id, doy):
 
             return temp_data.to_json(orient='records')
 
+@app.route('/feature/<feature_id>/check_wtoff/<date>')
+def check_wtoff(feature_id, date):
+    data_folder = f"ECO/{feature_id}/lake"
+    try:
+        files = supabase.storage.from_(bucket_name).list(data_folder)
+        matching_files = [file['name'] for file in files if file['name'].endswith('.tif') and "_wtoff" in file['name'] and date in file['name']]
+    except Exception as e:
+        print("Error fetching .tif files:", e)
+        return jsonify({"error": "Failed to fetch files"}), 500
+
+    if matching_files:
+        return jsonify({"wtoff": True, "files": matching_files})
+    else:
+        return jsonify({"wtoff": False})
+
 @app.route('/download_tif/<feature_id>/<filename>')
 def download_tif(feature_id, filename):
     data_folder = f"ECO/{feature_id}/lake"
@@ -233,6 +248,22 @@ def download_tif(feature_id, filename):
     except Exception as e:
         print("Error downloading .tif file:", e)
         abort(404)
+
+@app.route('/download_tif/<feature_id>/<filename>')
+def download_csv(feature_id, filename):
+    data_folder = f"ECO/{feature_id}/lake"
+    file_path = f"{data_folder}/{filename}"
+    
+    try:
+        # Download the file from Supabase storage
+        response = supabase.storage.from_(bucket_name).download(file_path)
+        csv_data = io.BytesIO(response)
+        csv_data.seek(0)  # Ensure the file pointer is at the beginning
+        return send_file(csv_data, as_attachment=True, download_name=filename, mimetype='application/octet-stream')
+    except Exception as e:
+        print("Error downloading .tif file:", e)
+        abort(404)
+
 
 # get all DOYs from the folder
 # show DOYs in selector

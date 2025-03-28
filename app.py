@@ -122,7 +122,7 @@ def get_doys(feature_id):
 
     tif_files = [f for f in os.listdir(data_folder) if f.endswith('.tif')]
     doys = get_updated_dates(tif_files)  # Assuming extract_metadata returns a dictionary with 'DOY'
-    return jsonify(sorted(doys))
+    return jsonify(list(reversed(doys)))
 
 @app.route('/feature/<feature_id>/tif/<doy>')
 def get_tif_by_doy(feature_id, doy):
@@ -158,9 +158,37 @@ def get_temperature_by_doy(feature_id, doy):
             
             return temp_data.to_json(orient='records')
             
+@app.route('/feature/<feature_id>/check_wtoff/<date>')
+def check_wtoff(feature_id, date):
+    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
+    
+    if not os.path.isdir(data_folder):
+        abort(404)
+
+    try:
+        tif_files = [f for f in os.listdir(data_folder) if f.endswith('.tif') and "_wtoff" in f and date in f]
+    except Exception as e:
+        print("Error fetching .tif files:", e)
+        return jsonify({"error": "Failed to fetch files"}), 500
+
+    if tif_files:
+        return jsonify({"wtoff": True, "files": tif_files})
+    else:
+        return jsonify({"wtoff": False})
+
 @app.route('/download_tif/<feature_id>/<filename>')
 def download_tif(feature_id, filename):
-    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECOraw', feature_id, 'lake')
+    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
+    file_path = os.path.join(data_folder, filename)
+    
+    if os.path.exists(file_path):
+        return send_file(file_path, as_attachment=True)
+    else:
+        abort(404)
+
+@app.route('/download_csv/<feature_id>/<filename>')
+def download_csv(feature_id, filename):
+    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
     file_path = os.path.join(data_folder, filename)
     
     if os.path.exists(file_path):

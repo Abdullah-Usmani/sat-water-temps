@@ -68,18 +68,40 @@
             font-weight: 600;
         }
 
-        a {
+        /* a {
             color: #f9a44a;
             text-decoration: none;
             transition: color 0.3s;
-        }
+        } */
 
         .info-box {
             display: flex;
             flex-direction: column;
             gap: 12px;
             width: 100%;
-            max-width: 180px;
+            margin-top: auto;
+            background: rgba(66, 135, 245, 0.8);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+            text-align: center; /* Center align text */
+            align-items: center; /* Center align child elements */
+        }
+        
+        .info-box:hover {
+            background: rgba(66, 135, 245, 1);
+        }
+        
+        #archive-text {
+            text-align: center; /* Center align text */
+            color: white;
+            text-decoration: none;
+            padding: 0;
+            margin: 0;
         }
 
         .box {
@@ -98,32 +120,11 @@
             transform: translateY(-3px);
         }
 
-        #polygon-selector-container {
-            position: absolute;
-            top: 20px;
-            left: 40%;
-            transform: translateX(-60%);
-            background: rgba(30, 30, 30, 0.9);
-            padding: 10px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-        }
-
-        #polygon-selector {
-            padding: 5px;
-            border-radius: 5px;
-            border: none;
-            background: #f9a44a;
-            color: #121212;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
         #color-selector-container {
             position: absolute;
             top: 20px;
-            left: 60%;
-            transform: translateX(-40%);
+            left: 70%;
+            transform: translateX(-30%);
             background: rgba(30, 30, 30, 0.9);
             padding: 10px;
             border-radius: 8px;
@@ -134,13 +135,13 @@
             padding: 5px;
             border-radius: 5px;
             border: none;
-            background: #ffdebb;
+            background: #f9a44a;
             color: #121212;
             font-weight: bold;
             cursor: pointer;
         }
 
-        #polygon-selector-container {
+        #date-selector-container {
             position: absolute;
             top: 20px;
             left: 50%;
@@ -151,7 +152,7 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
         }
 
-        #polygon-selector {
+        #date-selector {
             padding: 5px;
             border-radius: 5px;
             border: none;
@@ -228,29 +229,20 @@
             font-weight: bold;
             color: #f9a44a;
         }
-
-        .graph-type-selector {
-            top: 10px;
-            left: 10px;
-            padding: 2px 4px;
-            border-radius: 4px;
-            background: rgba(249, 164, 74, 0.9);
-            color: #121212;
-            border: 1px solid rgba(0,0,0,0.2);
-            font-size: 7px;
-            height: 30px;
-            width: 70px;
+        #mask-alert-container {
+            display: none;
+            position: absolute;
+            top: 70px; /* Adjusted to be below the date-selector-container */
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #f44336;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            z-index: 1001;
         }
 
-        #graph-container {
-            overflow: visible;
-            z-index: 1000;
-        }
-
-        #graph-container select {
-            z-index: 1002;
-        }
-        
         .unit-selector {
             margin-top: 10px;
             display: flex;
@@ -278,13 +270,19 @@
             position: fixed;
             bottom: 20px;
             left: 20px;
-            width: 300px;
+            width: 400px;
             height: 600px;
             background: rgba(30, 30, 30, 0.9);
             border-radius: 10px;
             padding: 15px;
+            padding-top: 40px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
             z-index: 1000;
+            overflow: visible;
+        }
+
+        #graph-container select {
+            z-index: 1002;
         }
 
         .graph-type-selector {
@@ -315,16 +313,7 @@
         .date-container label {
             margin-bottom: 5px;
         }
-
-        #date-selector {
-            padding: 5px;
-            border-radius: 5px;
-            border: none;
-            background: #f9a44a;
-            color: #121212;
-            font-weight: bold;
-        }
-
+        
         .view-all-btn {
             background: rgba(66, 135, 245, 0.8);
             color: white;
@@ -352,9 +341,13 @@
         <button id="back-btn" onclick="window.history.back();">Back</button>
     </div>
 
-    <div id="polygon-selector-container">
-        <label for="polygon-selector">Select Polygon Date:</label>
-        <select id="polygon-selector"></select>
+    <div id="date-selector-container">
+        <label for="date-selector">Select Polygon Date:</label>
+        <select id="date-selector"></select>
+    </div>
+
+    <div id="mask-alert-container">
+        <p>Water Mask is off!</p>
     </div>
 
     <div id="color-selector-container">
@@ -374,11 +367,6 @@
 
     <div id="sidebar">
         <h2>Temperature Data for <span id="location-name">{{ feature_id }}</span></h2>
-    
-        <div class="date-container">
-            <label for="date-selector">Select Date:</label>
-            <input type="date" id="date-selector" value="{{ latest_date }}">
-        </div>
 
         <div class="unit-selector">
             <button id="kelvin-btn" class="active" onclick="changeUnit('kelvin')">Kelvin</button>
@@ -402,7 +390,7 @@
         </div>
     
         <div class="info-box" id="archive-box">
-            <a href="/feature/{{ feature_id }}/archive">Archive</a>
+            <a href="/feature/{{ feature_id }}/archive" id="archive-text">Archive</a>
         </div>
     </div>
     
@@ -418,7 +406,9 @@
 
         // Initialize the application when DOM is loaded
         document.addEventListener('DOMContentLoaded', function() {
-            initializeDates();
+            initializeDates().then(() => {
+                checkWaterOff();
+            });
             initializeMap();
             initializeTemperatureData();
             initializeEventListeners();
@@ -467,7 +457,7 @@
                 updateChart();
             });
 
-            document.getElementById('polygon-selector').addEventListener('change', function() {
+            document.getElementById('date-selector').addEventListener('change', function() {
                 updateOverlay();
                 updateTemperatureData();
             });
@@ -533,35 +523,74 @@
         // Fetch available dates and update overlay on change
 
         function initializeDates() {
-            fetch('/feature/{{ feature_id }}/get_dates')
+            return fetch('/feature/{{ feature_id }}/get_dates')
                 .then(response => response.json())
                 .then(dates => {
-                    const selector = document.getElementById('polygon-selector');
+                    console.log(dates)
+                    const selector = document.getElementById('date-selector');
                     dates.forEach(date => {
                         const option = document.createElement('option');
                         option.value = date;
-                        option.textContent = date;
+                        option.textContent = formatDateTime(date);
                         selector.appendChild(option);
                     });
                 });
         }
+
+        function formatDateTime(date) {
+                const year = date.substring(0, 4);
+                const doy = parseInt(date.substring(4, 7), 10);
+                const hours = date.substring(7, 9);
+                const minutes = date.substring(9, 11);
+                const seconds = date.substring(11, 13);
+
+                const dateObj = new Date(year, 0);
+                dateObj.setDate(doy);
+
+                const day = String(dateObj.getDate()).padStart(2, '0');
+                const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+
+                textContent = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+
+                return textContent;
+            }
                 
         function updateOverlay() {
-                    const date = document.getElementById('polygon-selector').value;
-                    const newOverlayUrl = `/feature/{{ feature_id }}/tif/${date}`;
+            const date = document.getElementById('date-selector').value;
+            const newOverlayUrl = `/feature/{{ feature_id }}/tif/${date}`;
 
-                    map.eachLayer(function(layer) {
-                        if (layer instanceof L.ImageOverlay) {
-                            map.removeLayer(layer);
-                        }
-                    });
+            map.eachLayer(function(layer) {
+            if (layer instanceof L.ImageOverlay) {
+                map.removeLayer(layer);
+            }
+            });
 
-                    // Add new overlay and update reference
-                    overlay = L.imageOverlay(newOverlayUrl, polygon.getBounds()).addTo(map);
+            // Add new overlay and update reference
+            overlay = L.imageOverlay(newOverlayUrl, polygon.getBounds()).addTo(map);
+            checkWaterOff();
+        }
+
+        function checkWaterOff() {
+            const date = document.getElementById('date-selector').value;
+            // Fetch the flag from the server
+            fetch(`/feature/{{ feature_id }}/check_wtoff/${date}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.wtoff) {
+                    console.log("WTOFF");
+                    const alertBox = document.getElementById('mask-alert-container');
+                    if (data.wtoff) {
+                        alertBox.style.display = 'block';
+                    } else {
+                        alertBox.style.display = 'none';
+                    }
                 }
-                
+            })
+            .catch(error => console.error("Error fetching WTOFF flag:", error));
+        }
+
         async function updateTemperatureData() {
-            const date = document.getElementById('polygon-selector').value;
+            const date = document.getElementById('date-selector').value;
             try {
             const response = await fetch(`/feature/{{ feature_id }}/temperature/${date}`);
             
