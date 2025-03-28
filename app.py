@@ -188,9 +188,12 @@ def download_tif(feature_id, filename):
 
 @app.route('/download_csv/<feature_id>/<filename>')
 def download_csv(feature_id, filename):
+    filename = filename.replace(".tif", ".csv")  # Change the file extension to .csv
+    
     data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
     file_path = os.path.join(data_folder, filename)
     
+
     if os.path.exists(file_path):
         return send_file(file_path, as_attachment=True)
     else:
