@@ -249,10 +249,9 @@ def download_tif(feature_id, filename):
         print("Error downloading .tif file:", e)
         abort(404)
 
-@app.route('/download_tif/<feature_id>/<filename>')
+@app.route('/download_csv/<feature_id>/<filename>')
 def download_csv(feature_id, filename):
     filename = filename.replace(".tif", ".csv")  # Change the file extension to .csv
-    
     data_folder = f"ECO/{feature_id}/lake"
     file_path = f"{data_folder}/{filename}"
 
