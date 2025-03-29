@@ -9,6 +9,9 @@ import rasterio
 import numpy as np
 from datetime import datetime, timedelta
 from multiprocessing import Pool, cpu_count
+from dotenv import load_dotenv
+load_dotenv()
+
 
 # Directory paths
 print("Setting Directory Paths")
@@ -38,8 +41,11 @@ except Exception as e:
     raise ValueError(f"Could not read the shapefile: {e}")
 
 # Define Earthdata login credentials (Replace with your actual credentials)
-user = 'abdullahusmani1'
-password = 'haziqLOVERS123!'
+user = os.getenv("APPEEARS_USER")
+password = os.getenv("APPEEARS_PASS")
+
+if not user or not password:
+    raise ValueError("Earthdata credentials are not set. Please set APPEEARS_USER and APPEEARS_PASS as environment variables.")
 
 # Generate a timestamp for this run (format: YYYYMMDD_HHMM) for uniqueness in filenames
 timestamp = datetime.now().strftime("%Y%m%d_%H%M")
@@ -49,14 +55,14 @@ print("Setting Dates")
 today_date = datetime.now()
 today_date_str = today_date.strftime("%m-%d-%Y")
 # ed = today_date_str
-ed = "03-02-2025"
+ed = "03-08-2025"
 
 
 # Get Yesterday Date as Start Date
 yesterday_date = today_date - timedelta(days=1)
 yesterday_date_str = yesterday_date.strftime("%m-%d-%Y")
 # sd = yesterday_date_str
-sd = "02-26-2025"
+sd = "03-03-2025"
 # sd = "08-01-2023"
 
 # KEY RESULTS TO STORE/LOG
@@ -458,9 +464,9 @@ def log_updates():
     print(f"Updates saved to {full_path}.")
 
 # Phase 1: Submit task in one go
-task_request = build_task_request(product, layers, roi_json, sd, ed)
-task_id = submit_task(headers, task_request)
-# task_id = "3dd9c96f-d1dd-4e94-a79e-19708db263e2"
+# task_request = build_task_request(product, layers, roi_json, sd, ed)
+# task_id = submit_task(headers, task_request)
+task_id = "1b73ef44-9c05-4635-8daa-0fd4fe015b9f" # 03/03/2025 - 03/08/2025
 print(f"Task ID: {task_id}")
 
 # # Phase 2: Create Directories and Mapping
@@ -507,6 +513,21 @@ def clean_filtered_csvs(filtered_path):
                         df.drop(columns=[f"{col}"], inplace=True)
                     df.dropna(subset=["LST_filter"], inplace=True)
                     df.to_csv(file_path, index=False)
+                    print(f"Cleaned file: {file_path}")
+                except Exception as e:
+                    print(f"Error processing file {file_path}: {e}")
+                    
+def clean_filtered_tifs(filtered_path):
+    for root, _, files in os.walk(filtered_path):
+        for file in files:
+            if file.endswith(".tif"):
+                file_path = os.path.join(root, file)
+                try:
+                    with rasterio.open(file_path, "r+") as src:
+                        data = src.read(1)  # Read the first band
+                        data[data == src.nodata] = np.nan  # Replace nodata values with NaN
+                        data = np.where(np.isnan(data), src.nodata, data)  # Remove pixels with NaN
+                        src.write(data, 1)  # Write the cleaned data back to the file
                     print(f"Cleaned file: {file_path}")
                 except Exception as e:
                     print(f"Error processing file {file_path}: {e}")
