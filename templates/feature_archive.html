@@ -82,11 +82,11 @@
         
         #back-btn {
             position: absolute;
-            top: 80px;
+            top: 2%;
             left: 20px;
             background-color: #007BFF;
             color: #fff;
-            padding: 25px 50px;
+            padding: 12px 25px;
             border: none;
             border-radius: 10px;
             cursor: pointer;
@@ -104,11 +104,11 @@
 <body>
     <header>
         {{ feature_id }} Archive
+        <button id="back-btn" onclick="window.history.back();">Back</button>
     </header>
     
-    <button id="back-btn" onclick="window.history.back();">Back</button>
     <div class="container">
-        <div class="layer-controls">
+        <!-- <div class="layer-controls">
             <label><input type="checkbox" id="LST" checked> LST</label>
             <label><input type="checkbox" id="EmisWB"> EmisWB</label>
             <label><input type="checkbox" id="height"> Height</label>
@@ -116,7 +116,7 @@
             <label><input type="checkbox" id="water"> Water</label>
             <label><input type="checkbox" id="QC"> QC</label>
             <label><input type="checkbox" id="LST_err"> LST_err</label>
-        </div>
+        </div> -->
         
         <div class="grid-container" id="imageGrid">
             {% for filename in tif_files %}
@@ -162,34 +162,34 @@
             document.querySelectorAll('.grid-item').forEach(item => {
             const caption = item.querySelector('.caption');
             const filename = caption.title; // Original filename stored in the title attribute
-            if (filename.includes('_wtoff')) {
-                const subcaption = document.createElement('div');
-                subcaption.textContent = "Water mask off";
-                subcaption.style.color = "#ff6f61";
-                subcaption.style.fontSize = "12px";
-                subcaption.style.marginTop = "5px";
-                item.appendChild(subcaption);
-            }
+            // if (filename.includes('_wtoff')) {
+            //     const subcaption = document.createElement('div');
+            //     subcaption.textContent = "Water mask off";
+            //     subcaption.style.color = "#ff6f61";
+            //     subcaption.style.fontSize = "12px";
+            //     subcaption.style.marginTop = "5px";
+            //     item.appendChild(subcaption);
+            // }
             });
         }
 
-        function updateLayers() {
-            let selectedLayers = [];
-            document.querySelectorAll('.layer-controls input:checked').forEach(checkbox => {
-                selectedLayers.push(checkbox.id);
-            });
+        // function updateLayers() {
+        //     let selectedLayers = [];
+        //     document.querySelectorAll('.layer-controls input:checked').forEach(checkbox => {
+        //         selectedLayers.push(checkbox.id);
+        //     });
             
-            document.querySelectorAll('.grid-item').forEach(item => {
-                let layer = item.getAttribute('data-layer');
-                item.style.display = selectedLayers.includes(layer) ? "block" : "block";
-            });
-        }
+        //     document.querySelectorAll('.grid-item').forEach(item => {
+        //         let layer = item.getAttribute('data-layer');
+        //         item.style.display = selectedLayers.includes(layer) ? "block" : "block";
+        //     });
+        // }
         
-        document.querySelectorAll('.layer-controls input').forEach(input => {
-            input.addEventListener('change', updateLayers);
-        });
+        // document.querySelectorAll('.layer-controls input').forEach(input => {
+        //     input.addEventListener('change', updateLayers);
+        // });
         
-        updateLayers();
+        // updateLayers();
         updateCaptions();
         addWaterMaskSubcaptions();
 
