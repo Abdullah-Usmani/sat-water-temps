@@ -232,9 +232,9 @@ def check_wtoff(feature_id, date):
         return jsonify({"error": "Failed to fetch files"}), 500
 
     if matching_files:
-        return jsonify({"wtoff": True, "files": matching_files})
+        return jsonify({"wtoff": False, "files": matching_files})
     else:
-        return jsonify({"wtoff": False})
+        return jsonify({"wtoff": True})
 
 @app.route('/download_tif/<feature_id>/<filename>')
 def download_tif(feature_id, filename):
