@@ -12,10 +12,10 @@ from multiprocessing import Pool, cpu_count
 
 # Directory paths
 print("Setting Directory Paths")
-raw_path = r"/Users/ssj/Desktop/SatelliteRetrievalProject/MODISraw/"
-filtered_path = r"/Users/ssj/Desktop/SatelliteRetrievalProject/MODIS/"
-roi_path = r"/Users/ssj/Desktop/SateliteRetrievalProjec/polygon/corrected/site_full_ext_Corrected.shp"
-log_path = r"/Users/ssj/Desktop/SatelliteRetrievalProject/logs/"
+raw_path = r"/Users/ssj/Desktop/SatelliteRetrievalProject_test/MODISraw/"
+filtered_path = r"/Users/ssj/Desktop/SatelliteRetrievalProject_test/MODIS/"
+roi_path = r"/Users/ssj/Desktop/SateliteRetrievalProjec/polygon/test/site_full_ext_Test.shp"
+log_path = r"/Users/ssj/Desktop/SatelliteRetrievalProject_test/logs/"
 download_log = os.path.join(log_path, "downloaded_files.json")
 log_file = os.path.join(log_path, f"modis_retrieval_{datetime.now().strftime('%Y%m%d_%H%M')}.log")
 
@@ -79,15 +79,8 @@ log_message("Setting Dates")
 today_date = datetime.now()
 end_date = today_date - timedelta(days=1)
 start_date = today_date - timedelta(days=8)
-ed = "03-02-2025"
+ed = "03-05-2025"
 sd = "02-26-2025"
-
-# MODIS-specific settings
-token = get_token(user, password)
-product = "MYD09A1.061"  # MODIS Surface Reflectance 8-day L3 Global 500m
-headers = {
-    'Authorization': f'Bearer {token}'
-}
 
 # KEY RESULTS TO STORE/LOG
 updated_aids = set()
@@ -96,6 +89,26 @@ new_dates = []
 multi_aids = set()
 multi_files = []
 aid_folder_mapping = {}
+ # Define valid range for surface reflectance bands
+INVALID_QC_VALUES = {
+
+    1107297155,  # Corrected product not produced
+    1983120245,  # Bands 1-4 have multiple correction out-of-bounds issues
+    1983120193,  # Similar issue: bands 1-4 out of bounds + dead detector
+    1979712373,  # Bands 1-4 have severe quality issues
+    1979712321,  # Similar: correction out of bounds for bands 1-4
+    1975518069,  # Bands 1-4 constrained to extreme values
+    1975518017,  # Bands 1-4 out of bounds
+    1110705013,  # Bands 1-4 dead detector + out of bounds
+    1110704181,  # Similar: bands 1-4 invalid
+}
+
+# MODIS-specific settings
+token = get_token(user, password)
+product = "MYD09A1.061"  # MODIS Surface Reflectance 8-day L3 Global 500m
+headers = {
+    'Authorization': f'Bearer {token}'
+}
 
 # MODIS Bands for Water Quality Analysis
 layers = [
@@ -103,10 +116,10 @@ layers = [
     "sur_refl_b02",  # NIR - NDWI, TSS
     "sur_refl_b03",  # Blue - Chlorophyll-a
     "sur_refl_b04",  # Green - Chlorophyll-a
-    "sur_refl_b05",  # SWIR - Water masking
-    "sur_refl_qc_500m"  # Quality Control for cloud/water masking
+   # "sur_refl_b05",  # SWIR - Water masking
+    "sur_refl_qc_500m",  # Quality Control for cloud/water masking
+  # "sur_refl_state_500m"  # State QA for cloud/water masking
 ]
-
 log_message("Loading Regions of Interest")
 roi_json = roi.__geo_interface__  # Convert ROI to GeoJSON
 
@@ -114,7 +127,7 @@ roi_json = roi.__geo_interface__  # Convert ROI to GeoJSON
 def build_task_request(product, layers, roi_json, sd, ed):
     task = {
         "task_type": "area",
-        "task_name": "MODIS_WaterQuality_Request",
+        "task_name": "MODIS_WaterQuality_Request test1",
         "params": {
             "dates": [{"startDate": sd, "endDate": ed}],
             "layers": [{"product": product, "layer": layer} for layer in layers],
@@ -206,13 +219,11 @@ def download_results(task_id, headers):
                 print(f"Downloaded {local_filename}")
 
         else:
-            # Handle general files without aid numbers (e.g., XML, CSV, JSON)
+            # Handle general files without aid numbers
             base_name, ext = os.path.splitext(file_name)
             new_file_name = f"{base_name}_{timestamp}{ext}"  # Append timestamp before extension
             local_filename = os.path.join(raw_path, new_file_name)  # Save directly to the base folder
-
             # print(f"Downloading to base folder: {local_filename}")
-
             download_url = f"{url}/{file_id}"
             download_response = requests.get(download_url, headers=headers, stream=True, allow_redirects=True)
 
@@ -226,7 +237,7 @@ def download_results(task_id, headers):
 # Function to extract aid number and date from filename
 def extract_metadata(filename):
     aid_match = re.search(r'aid(\d{4})', filename)
-    date_match = re.search(r'doy(\d{13})', filename)
+    date_match = re.search(r'doy(\d{7,14})', filename)
 
     aid_number = int(aid_match.group(1)) if aid_match else None
     date = date_match.group(1) if date_match else None
@@ -253,8 +264,12 @@ def read_array(raster):
 # Function to process a single date
 def process_rasters(aid_number, date, selected_files):
     print(f"Processing date: {date} for aid: {aid_number}")
-    relevant_files = [f for f in selected_files if date in f]
+    relevant_files = []
     water_mask_flag = True
+    for f in selected_files:
+        aid, f_date = extract_metadata(f)
+        if aid == aid_number and date == f_date:
+            relevant_files.append(f)
     if not relevant_files:
         print(f"No files found for date: {date}")
         return
@@ -264,16 +279,16 @@ def process_rasters(aid_number, date, selected_files):
     NIR = read_raster("sur_refl_b02", relevant_files)
     Blue = read_raster("sur_refl_b03", relevant_files)
     Green = read_raster("sur_refl_b04", relevant_files)
-    SWIR = read_raster("sur_refl_b05", relevant_files)
+    #SWIR = read_raster("sur_refl_b05", relevant_files)
     QC = read_raster("sur_refl_qc_500m", relevant_files)
 
-    if None in [Red, NIR, Blue, Green, SWIR, QC]:
+    if None in [Red, NIR, Blue, Green, QC]:
         print(f"Skipping {date} due to missing layers.")
         return
 
     # Read raster data into NumPy arrays
     arrays = {key: read_array(layer) for key, layer in {
-        "Red": Red, "NIR": NIR, "Blue": Blue, "Green": Green, "SWIR": SWIR, "QC": QC
+        "sur_refl_b01":Red, "sur_refl_b02":NIR, "sur_refl_b03": Blue, "sur_refl_b04": Green, "sur_refl_qc_500m": QC
     }.items()}
 
      # Get AID number
@@ -290,18 +305,18 @@ def process_rasters(aid_number, date, selected_files):
 
     raw_tif_path = os.path.join(dest_folder_raw, f"{name}_{location}_{date}_raw.tif")
     # Update metadata to match the number of bands
-    raw_meta = Red.meta.copy()
+    raw_meta = Blue.meta.copy()
     raw_meta.update(dtype=rasterio.float32, count=len(arrays))  # Ensure correct band count
 
     # Open the new TIF file with multiple bands
     with rasterio.open(raw_tif_path, "w", **raw_meta) as dst:
         for idx, (key, data) in enumerate(arrays.items(), start=1):
-         dst.write(data, idx)  # Write each band correctly
+            dst.write(data, idx)  # Write each band correctly
 
     print(f"Saved raw raster: {raw_tif_path}")
 
     # Convert raster data to DataFrame
-    rows, cols = arrays["Red"].shape  # Use an available key like 'Red'
+    rows, cols = arrays["sur_refl_b01"].shape  # Use an available key like 'Green'
     x, y = np.meshgrid(np.arange(cols), np.arange(rows))
 
     df = pd.DataFrame({
@@ -318,57 +333,68 @@ def process_rasters(aid_number, date, selected_files):
     filter_csv_path = os.path.join(dest_folder_filtered, f"{name}_{location}_{date}_filter.csv")
     filter_tif_path = os.path.join(dest_folder_filtered, f"{name}_{location}_{date}_filter.tif")
 
-    water_mask_flag = (df["wt"] == 1).any()
-    if not water_mask_flag:
-        print(f"Skipping {date} due to no water mask.")
-        return
+
+    ###`# QC Filtering and Masking`
+    def extract_qc_flags(qc_value):
+        """Extract cloud and water flags from the MODIS QC bit field."""
+        qc_binary = format(qc_value, '032b')  # Convert QC value to 32-bit binary
+        
+        cloud_mask = int(qc_binary[-2:], 2)   # Cloud state (last 2 bits)
+        water_mask = int(qc_binary[-4:-2], 2) # Water state (bits 2-3)
+
+        return cloud_mask, water_mask
     
-    # Define valid range for surface reflectance bands
-    VALID_MIN = -100
-    VALID_MAX = 16000
-    SCALE_FACTOR = 0.0001
-
-    # Function to check valid pixel values
-    def filter_invalid_values(df, bands):
-        for band in bands:
-            df[f"{band}_filtered"] = np.where(
-                (df[band] >= VALID_MIN) & (df[band] <= VALID_MAX),
-                df[band] * SCALE_FACTOR,  # Apply scale factor
-                np.nan  # Set invalid values to NaN
-            )
+    # Function to apply QC mask
+    def apply_qc_mask(df):
+        """Filter out cloudy and deep water pixels based on MODIS QC flags."""
+        
+        # Ensure QC values are integer type
+        df["sur_refl_qc_500m"] = df["sur_refl_qc_500m"].fillna(0).astype(int)
+        
+        # Extract flags
+        cloud_flags, water_flags = zip(*df["sur_refl_qc_500m"].map(extract_qc_flags))
+        
+        # Store extracted flags
+        df["cloud_mask"] = cloud_flags
+        df["water_mask"] = water_flags
+        
         return df
+    
+    # Apply the QC mask extraction function
+    df = apply_qc_mask(df)
 
-    # Function to filter based on QC flags using bit masking
-    def filter_qc_flags(df):
-        def is_valid_qc(qc_value):
-            qc_bits = format(qc_value, "032b")  # Convert QC flag to 32-bit binary
-            MODLAND_QA = qc_bits[-2:]  # Bits 0-1 (ideal quality: '00' or '01')
-            return MODLAND_QA in ["00", "01"]  # Keep high-quality pixels
+    # Step 1: Apply QC filtering (remove invalid pixels)
+    for col in ["sur_refl_b01", "sur_refl_b02", "sur_refl_b03", "sur_refl_b04", "sur_refl_qc_500m"]:
+        df[f"{col}_filter"] = np.where(df["sur_refl_qc_500m"].isin(INVALID_QC_VALUES), np.nan, df[col])
 
-        df["QC_filtered"] = df["sur_refl_qc_500m"].apply(lambda x: x if is_valid_qc(x) else np.nan)
-        return df
+    # Step 2: Remove Cloudy Pixels
+    df["modland_qc"] = df["sur_refl_qc_500m"] & 0b11  # Extract bits 0-1
 
-    # Function to apply cloud masking
-    def apply_cloud_mask(df):
-        df["cloud_mask"] = df["sur_refl_state_500m"] & 0b11  # Extract bits 0-1
-        for band in ["sur_refl_b01", "sur_refl_b02", "sur_refl_b03", "sur_refl_b04", "sur_refl_b05"]:
-            df.loc[df["cloud_mask"] > 0, f"{band}_filtered"] = np.nan  # Mask only reflectance bands
-        return df
+    # Cloud detection: If modland_qc == 3, it's cloudy
+    df["cloud_mask"] = np.where(df["modland_qc"] == 3, 1, 0)
 
-    # Process dataset
-    bands = ["sur_refl_b01", "sur_refl_b02", "sur_refl_b03", "sur_refl_b04", "sur_refl_b05"]
-    df = filter_invalid_values(df, bands)
-    df = filter_qc_flags(df)
-    df = apply_cloud_mask(df)
+    # Set NaN for invalid pixels
+    df.loc[df["sur_refl_qc_500m"].isin(INVALID_QC_VALUES), "cloud_mask"] = np.nan
+
+    # Step 3: Water Masking
+    df["water_mask"] = np.where(df["modland_qc"] == 0, 1, 0)
+
+    # Set NaN for invalid pixels
+    df.loc[df["sur_refl_qc_500m"].isin(INVALID_QC_VALUES), "water_mask"] = np.nan
+
+    # Define output file paths
+    filter_csv_path = os.path.join(dest_folder_filtered, f"{name}_{location}_{date}_filter_wtoff.csv")
+    filter_tif_path = os.path.join(dest_folder_filtered, f"{name}_{location}_{date}_filter_wtoff.tif")
 
     # Save filtered CSV
-    filter_csv_path = os.path.join(filtered_path, f"{name}_{location}_{date}_filtered.csv")
+    #filter_csv_path = os.path.join(filtered_path, f"{name}_{location}_{date}_filtered.csv")
     df.to_csv(filter_csv_path, index=False)
+    multi_files.append(filter_csv_path)
     print(f"Saved filtered CSV: {filter_csv_path}")
 
     # Convert filtered data back to raster
     def create_raster(data, reference_raster):
-        """Reshape filtered data into raster format using reference metadata."""
+        print("""Reshape filtered data into raster format using reference metadata.""")
        # rows, cols = reference_raster.shape
         meta = reference_raster.meta.copy()
         meta.update(dtype=rasterio.float32, count=1)  # Single-band raster
@@ -376,40 +402,30 @@ def process_rasters(aid_number, date, selected_files):
 
     # Define filtered raster data for MODIS Surface Reflectance Bands
     filtered_rasters = {
-        "sur_refl_b01": create_raster(df["sur_refl_b01_filtered"].values, Red),
-        "sur_refl_b02": create_raster(df["sur_refl_b02_filtered"].values, NIR),
-        "sur_refl_b03": create_raster(df["sur_refl_b03_filtered"].values, Blue),
-        "sur_refl_b04": create_raster(df["sur_refl_b04_filtered"].values, Green),
-        "sur_refl_b05": create_raster(df["sur_refl_b05_filtered"].values, SWIR),
-        "sur_refl_qc_500m": create_raster(df["QC_filtered"].values, QC)
+        "sur_refl_b01": create_raster(df["sur_refl_b01_filter"].values, Red),
+        "sur_refl_b02": create_raster(df["sur_refl_b02_filter"].values, NIR),
+        "sur_refl_b03": create_raster(df["sur_refl_b03_filter"].values, Blue),
+        "sur_refl_b04": create_raster(df["sur_refl_b04_filter"].values, Green),
+        "sur_refl_qc_500m": create_raster(df["sur_refl_qc_500m_filter"].values, QC)
+        #"sur_refl_b05": create_raster(df["sur_refl_b05_filtered"].values, )
     }
-
     # Get metadata from one of the rasters
-    filter_meta = filtered_rasters["sur_refl_b01"][1].copy()
+    filter_meta = filtered_rasters["sur_refl_b04"][1].copy()
     filter_meta.update(dtype=rasterio.float32, count=len(filtered_rasters))  # Update band count
 
-    # Save the filtered raster
-    output_raster_path = "filtered_MODIS_surface_reflectance.tif"
-
-    with rasterio.open(output_raster_path, "w", **filter_meta) as dst:
-        for i, (band_name, (data, _)) in enumerate(filtered_rasters.items(), start=1):
-            dst.write(data, i)  # Write each filtered band
+    with rasterio.open(filter_tif_path, "w", **filter_meta) as dst:
+        for idx, (band_name, (data, _)) in enumerate(filtered_rasters.items(), start=1):
+            dst.write(data, idx)  # Write each filtered band
     multi_aids.add(aid_number)
     multi_files.append(filter_tif_path)
 
-    print(f"Saved filtered MODIS raster: {output_raster_path}")
+    print(f"Saved filtered MODIS raster: {filter_tif_path}")
     print(f"Finished processing {date}")
-
-   # Function to process a single dataset
-def process_single_water_quality(args):
-    aid_number, date, specific_date_files = args
-    process_rasters(aid_number, date, specific_date_files)
 
 # Main function to process all new water quality files
 def process_all_water_quality(all_new_files):
-    updated_aids = get_updated_folders(all_new_files)  # Identify updated folders
+   # updated_aids = get_updated_folders(all_new_files)  # Identify updated folders
     print(updated_aids)
-
     if not updated_aids:
         print("No new water quality data to process.")
         return
@@ -417,12 +433,16 @@ def process_all_water_quality(all_new_files):
     print(f"Processing {len(updated_aids)} updated water quality datasets...")
 
     # Iterate through each updated folder
-    for aid_number in updated_aids:
-        aid_folder_files = [file for file in all_new_files if aid_number == extract_metadata(file)[0]]
+    print("All new files detected:", all_new_files)
 
+    for aid_number in updated_aids:
+        aid_folder_files = []
+        for file in all_new_files:
+            if aid_number == extract_metadata(file)[0]:
+                aid_folder_files.append(file)
         new_dates_get = get_updated_dates(aid_folder_files)
         if not new_dates_get:
-            print(f"No new water quality files to process for AID {aid_number}.")
+            print("No new files to process.")
             continue
         specific_date_files = []
 
@@ -532,7 +552,7 @@ for idx, row in roi.iterrows():
     print(f"Output folder created: {output_folder}")
     
     # Map aid numbers to output folders
-#    aid_number = f'aid{str(idx + 1).zfill(4)}'  # Construct aid number
+    # aid_number = f'aid{str(idx + 1).zfill(4)}'  # Construct aid number
     aid_number = int(idx + 1)  # Construct aid number
     aid_folder_mapping[int(aid_number)] = (row['name'], row['location'])  # Map aid number to folder
 
