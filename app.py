@@ -244,29 +244,6 @@ def convert_tif_to_png(tif_path):
     """
     # layer_type = extract_layer(tif_path)  # Assumes function exists
     with rasterio.open(tif_path) as dataset:
-        # # if layer_type in ['QC', 'cloud', 'height', 'water', 'EmisWB']:
-        # #    add logic for different color palettes for each layer type
-        # bands = [dataset.read(1)]  # Read the first band (assuming grayscale)
-
-        # norm_bands = []
-        # for band in bands:
-        #     min_val = np.nanmin(band)  # Use np.nanmin to ignore NaN values
-        #     max_val = np.nanmax(band)
-
-        #     # print(f"Min: {min_val}, Max: {max_val}")  # Debugging output
-        #     norm_band = ((band - min_val) / (max_val - min_val) * 255).astype(np.uint8)
-
-        #     norm_bands.append(norm_band)
-
-
-        # # Stack grayscale as RGB if necessary
-        # img_array = np.stack([norm_bands[0]] * 3, axis=-1)  # Convert grayscale to RGB
-
-        # # Convert to image format and return response
-        # img = Image.fromarray(img_array)
-        # img_bytes = io.BytesIO()
-        # img.save(img_bytes, format="PNG")
-        # img_bytes.seek(0)
 
         num_bands = dataset.count
         # print(f"Number of bands: {num_bands}")
@@ -279,47 +256,57 @@ def convert_tif_to_png(tif_path):
             img_bytes.seek(0)
             return img_bytes
 
-        # Single color-scale output for LST
-        # Read the first band
-        band = dataset.read(1).astype(np.float32)  # Convert to float for normalization
+        #
+        # THIS IS THE HARDSCALE OUTPUT
+        #
 
-        # Handle no-data values (replace NaNs with 0)
-        band[np.isnan(band)] = 0  # Ensure NaNs don't affect normalization
+        # # Read the first band
+        # band = dataset.read(1).astype(np.float32)  # Convert to float for normalization
 
-        # Normalize band using a fixed global min/max
-        band = np.clip(band, GLOBAL_MIN, GLOBAL_MAX)  # Clip values to valid range
-        norm_band = ((band - GLOBAL_MIN) / (GLOBAL_MAX - GLOBAL_MIN) * 255).astype(np.uint8)
+        # # Handle no-data values (replace NaNs with 0)
+        # band[np.isnan(band)] = 0  # Ensure NaNs don't affect normalization
 
-        # Generate an alpha mask: Transparent where band = 0 (or NaN originally)
-        alpha_mask = np.where(band <= GLOBAL_MIN, 0, 255).astype(np.uint8)
+        # # Normalize band using a fixed global min/max
+        # band = np.clip(band, GLOBAL_MIN, GLOBAL_MAX)  # Clip values to valid range
+        # norm_band = ((band - GLOBAL_MIN) / (GLOBAL_MAX - GLOBAL_MIN) * 255).astype(np.uint8)
 
-        # Apply colormap (e.g., 'jet')
-        cmap = plt.get_cmap('jet')
-        rgba_img = cmap(norm_band / 255.0)  # Normalize to 0-1 for colormap
+        # # Generate an alpha mask: Transparent where band = 0 (or NaN originally)
+        # alpha_mask = np.where(band <= GLOBAL_MIN, 0, 255).astype(np.uint8)
 
-        # Convert to 8-bit per channel
-        rgba_img = (rgba_img * 255).astype(np.uint8)
-
-        # **Ensure the alpha channel is set correctly**
-        rgba_img[..., 3] = alpha_mask  # Apply the transparency mask
-
-        # bands = [dataset.read(band) for band in range(1, num_bands + 1)]
-        # norm_bands, alpha_mask = zip(*[normalize(band) for band in bands])
-
-        # # Color coded output?    
-        # # Use the first band for color mapping
-        # norm_band = norm_bands[0]
-
-        # # Apply a colormap (e.g., 'jet') using matplotlib
+        # # Apply colormap (e.g., 'jet')
         # cmap = plt.get_cmap('jet')
         # rgba_img = cmap(norm_band / 255.0)  # Normalize to 0-1 for colormap
 
         # # Convert to 8-bit per channel
         # rgba_img = (rgba_img * 255).astype(np.uint8)
 
-        # # Add transparency channel (alpha)
-        # rgba_img[..., 3] = alpha_mask[0]
+        # # **Ensure the alpha channel is set correctly**
+        # rgba_img[..., 3] = alpha_mask  # Apply the transparency mask
 
+
+        #
+        # THIS IS THE RELATIVE COLOR CODED OUTPUT
+        #
+        bands = [dataset.read(band) for band in range(1, num_bands + 1)]  # Read all bands
+        norm_bands, alpha_mask = zip(*[normalize(band) for band in bands])  # Normalize each band
+
+        # Color coded output?
+        # Use the first band for color mapping
+        norm_band = norm_bands[0]
+
+        # Apply a colormap (e.g., 'jet') using matplotlib
+        cmap = plt.get_cmap('jet')
+        rgba_img = cmap(norm_band / 255.0)  # Normalize to 0-1 for colormap
+
+        # Convert to 8-bit per channel
+        rgba_img = (rgba_img * 255).astype(np.uint8)
+
+        # Add transparency channel (alpha)
+        rgba_img[..., 3] = alpha_mask[0]
+
+        #
+        # THIS IS THE GRAYSCALE OUTPUT
+        #
         # Grayscale custom output
         # Stack bands as RGB, using only the first band as grayscale
         # Can add selector for different color combinations and what not
@@ -339,8 +326,8 @@ def convert_tif_to_png(tif_path):
 # This thing creates a .png for the .tif file
 def multi_tif_to_png(tif_path):
     """Converts a multi-band .tif to a .png with transparency for missing data."""
-
     with rasterio.open(tif_path) as dataset:
+
         num_bands = dataset.count
         # print(f"Number of bands: {num_bands}")
 
@@ -352,48 +339,57 @@ def multi_tif_to_png(tif_path):
             img_bytes.seek(0)
             return img_bytes
 
+        #
+        # THIS IS THE HARDSCALE OUTPUT
+        #
 
-        # Read the first band
-        band = dataset.read(1).astype(np.float32)  # Convert to float for normalization
+        # # Read the first band
+        # band = dataset.read(1).astype(np.float32)  # Convert to float for normalization
 
-        # Handle no-data values (replace NaNs with 0)
-        band[np.isnan(band)] = 0  # Ensure NaNs don't affect normalization
+        # # Handle no-data values (replace NaNs with 0)
+        # band[np.isnan(band)] = 0  # Ensure NaNs don't affect normalization
 
-        # Normalize band using a fixed global min/max
-        band = np.clip(band, GLOBAL_MIN, GLOBAL_MAX)  # Clip values to valid range
-        norm_band = ((band - GLOBAL_MIN) / (GLOBAL_MAX - GLOBAL_MIN) * 255).astype(np.uint8)
+        # # Normalize band using a fixed global min/max
+        # band = np.clip(band, GLOBAL_MIN, GLOBAL_MAX)  # Clip values to valid range
+        # norm_band = ((band - GLOBAL_MIN) / (GLOBAL_MAX - GLOBAL_MIN) * 255).astype(np.uint8)
 
-        # Generate an alpha mask: Transparent where band = 0 (or NaN originally)
-        alpha_mask = np.where(band <= GLOBAL_MIN, 0, 255).astype(np.uint8)
+        # # Generate an alpha mask: Transparent where band = 0 (or NaN originally)
+        # alpha_mask = np.where(band <= GLOBAL_MIN, 0, 255).astype(np.uint8)
 
-        # Apply colormap (e.g., 'jet')
-        cmap = plt.get_cmap('jet')
-        rgba_img = cmap(norm_band / 255.0)  # Normalize to 0-1 for colormap
-
-        # Convert to 8-bit per channel
-        rgba_img = (rgba_img * 255).astype(np.uint8)
-
-        # **Ensure the alpha channel is set correctly**
-        rgba_img[..., 3] = alpha_mask  # Apply the transparency mask
-
-        
-        # bands = [dataset.read(band) for band in range(1, num_bands + 1)] # Read all bands
-        # norm_bands, alpha_mask = zip(*[normalize(band) for band in bands]) # Normalize each band
-
-        # # Color coded output?    
-        # # Use the first band for color mapping
-        # norm_band = norm_bands[0]
-
-        # # Apply a colormap (e.g., 'jet') using matplotlib
+        # # Apply colormap (e.g., 'jet')
         # cmap = plt.get_cmap('jet')
         # rgba_img = cmap(norm_band / 255.0)  # Normalize to 0-1 for colormap
 
         # # Convert to 8-bit per channel
         # rgba_img = (rgba_img * 255).astype(np.uint8)
 
-        # # Add transparency channel (alpha)
-        # rgba_img[..., 3] = alpha_mask[0]
+        # # **Ensure the alpha channel is set correctly**
+        # rgba_img[..., 3] = alpha_mask  # Apply the transparency mask
 
+
+        #
+        # THIS IS THE RELATIVE COLOR CODED OUTPUT
+        #
+        bands = [dataset.read(band) for band in range(1, num_bands + 1)]  # Read all bands
+        norm_bands, alpha_mask = zip(*[normalize(band) for band in bands])  # Normalize each band
+
+        # Color coded output?
+        # Use the first band for color mapping
+        norm_band = norm_bands[0]
+
+        # Apply a colormap (e.g., 'jet') using matplotlib
+        cmap = plt.get_cmap('jet')
+        rgba_img = cmap(norm_band / 255.0)  # Normalize to 0-1 for colormap
+
+        # Convert to 8-bit per channel
+        rgba_img = (rgba_img * 255).astype(np.uint8)
+
+        # Add transparency channel (alpha)
+        rgba_img[..., 3] = alpha_mask[0]
+
+        #
+        # THIS IS THE GRAYSCALE OUTPUT
+        #
         # Grayscale custom output
         # Stack bands as RGB, using only the first band as grayscale
         # Can add selector for different color combinations and what not
@@ -407,7 +403,6 @@ def multi_tif_to_png(tif_path):
         img_bytes = io.BytesIO()
         img.save(img_bytes, format="PNG")
         img_bytes.seek(0)
-
     return img_bytes
 
 @app.route('/feature/full-view')
