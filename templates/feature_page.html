@@ -673,13 +673,13 @@
                 throw new Error(data.error);
             }
 
-            temperatureData = data['data'];
-
-            // Ensure data is an array and has valid entries
-            temperatureData = Array.isArray(temperatureData) && temperatureData.length > 0 ? data : [];
-
             relative_min = data['min_max'][0];
             relative_max = data['min_max'][1];
+
+            rawData = data['data'];
+
+            // Ensure data is an array and has valid entries
+            temperatureData = Array.isArray(rawData) && rawData.length > 0 ? rawData : [];
             
             if (temperatureData.length === 0) {
                 console.error("No temperature data available for the selected date.");
@@ -702,9 +702,10 @@
                 throw new Error(data.error);
             }
 
-            temperatureData = data['data'];
+            rawData = data['data'];
 
-            temperatureData = Array.isArray(temperatureData) ? temperatureData : [];
+            // Ensure data is an array and has valid entries
+            temperatureData = Array.isArray(rawData) && rawData.length > 0 ? rawData : [];
 
             relative_min = data['min_max'][0];
             relative_max = data['min_max'][1];
