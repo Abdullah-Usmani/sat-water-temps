@@ -341,6 +341,7 @@ def tif_to_png(tif_path, color_scale="relative"):
         if color_scale == "hard":
             # Hardscale output
             band = dataset.read(1).astype(np.float32)  # Convert to float for normalization
+            band[np.isnan(band)] = 0
             band = np.clip(band, GLOBAL_MIN, GLOBAL_MAX)  # Clip values to valid range
             norm_band = ((band - GLOBAL_MIN) / (GLOBAL_MAX - GLOBAL_MIN) * 255).astype(np.uint8)
             alpha_mask = np.where(band <= GLOBAL_MIN, 0, 255).astype(np.uint8)
