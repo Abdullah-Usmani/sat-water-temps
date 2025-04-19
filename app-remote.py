@@ -360,7 +360,7 @@ def tif_to_png(tif_path, color_scale="relative"):
             rgba_img = (rgba_img * 255).astype(np.uint8)
             rgba_img[..., 3] = alpha_mask[0]  # Apply transparency mask
 
-        elif color_scale == "grayscale":
+        elif color_scale == "gray":
             # Grayscale output
             bands = [dataset.read(band) for band in range(1, num_bands + 1)]  # Read all bands
             norm_bands, alpha_mask = zip(*[normalize(band) for band in bands])  # Normalize each band
