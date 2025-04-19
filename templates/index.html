@@ -14,6 +14,9 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 
+    <!-- Favicon -->
+    <link rel="icon" href="/static/web_logo.png" type="image/png">
+
     <style>
         /* General Styles */
         body {
@@ -165,55 +168,55 @@
                 
 
             // Add the GeoJSON data with local data
-            fetch("/static/polygons.geojson")
-                .then(response => response.json())
-                .then(data => {
-                    L.geoJSON(data, {
-                        style: function (feature) {
-                            return { color: "#8abbff", weight: 2 };
-                        },
-                        onEachFeature: function (feature, layer) {
-                            layer.on({
-                                mouseover: function () { layer.setStyle({ color: "#00ff00" }); },
-                                mouseout: function () { layer.setStyle({ color: "#8abbff" }); },
-                                click: function () {
-                                    const featureId = feature.properties.name;
-                                    if (featureId) {
-                                        window.location.href = `/feature/${featureId}`;
-                                    } else {
-                                        alert("No valid feature ID found.");
-                                    }
-                                }
-                            });
-                       }
-                    }).addTo(map);
-                });
+            // fetch("/static/polygons.geojson")
+            //     .then(response => response.json())
+            //     .then(data => {
+            //         L.geoJSON(data, {
+            //             style: function (feature) {
+            //                 return { color: "#8abbff", weight: 2 };
+            //             },
+            //             onEachFeature: function (feature, layer) {
+            //                 layer.on({
+            //                     mouseover: function () { layer.setStyle({ color: "#00ff00" }); },
+            //                     mouseout: function () { layer.setStyle({ color: "#8abbff" }); },
+            //                     click: function () {
+            //                         const featureId = feature.properties.name;
+            //                         if (featureId) {
+            //                             window.location.href = `/feature/${featureId}`;
+            //                         } else {
+            //                             alert("No valid feature ID found.");
+            //                         }
+            //                     }
+            //                 });
+            //            }
+            //         }).addTo(map);
+            //     });
 
             // Add the GeoJSON data with Jinja2 template for remote retrieval
-            // const geojsonData = JSON.parse('{{ geojson | safe }}');
-            // if (geojsonData) {
-            //     L.geoJSON(geojsonData, {
-            //         style: function (feature) {
-            //             return { color: "#8abbff", weight: 2 };
-            //         },
-            //         onEachFeature: function (feature, layer) {
-            //             layer.on({
-            //                 mouseover: function () { layer.setStyle({ color: "#00ff00" }); },
-            //                 mouseout: function () { layer.setStyle({ color: "#8abbff" }); },
-            //                 click: function () {
-            //                     const featureId = feature.properties.name;
-            //                     if (featureId) {
-            //                         window.location.href = `/feature/${featureId}`;
-            //                     } else {
-            //                         alert("No valid feature ID found.");
-            //                     }
-            //                 }
-            //             });
-            //         }
-            //     }).addTo(map);
-            // } else {
-            //     console.error("GeoJSON data is not available.");
-            // }
+            const geojsonData = JSON.parse('{{ geojson | safe }}');
+            if (geojsonData) {
+                L.geoJSON(geojsonData, {
+                    style: function (feature) {
+                        return { color: "#8abbff", weight: 2 };
+                    },
+                    onEachFeature: function (feature, layer) {
+                        layer.on({
+                            mouseover: function () { layer.setStyle({ color: "#00ff00" }); },
+                            mouseout: function () { layer.setStyle({ color: "#8abbff" }); },
+                            click: function () {
+                                const featureId = feature.properties.name;
+                                if (featureId) {
+                                    window.location.href = `/feature/${featureId}`;
+                                } else {
+                                    alert("No valid feature ID found.");
+                                }
+                            }
+                        });
+                    }
+                }).addTo(map);
+            } else {
+                console.error("GeoJSON data is not available.");
+            }
         });
     </script>
 </body>

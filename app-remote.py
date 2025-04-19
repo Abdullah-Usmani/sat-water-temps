@@ -21,8 +21,8 @@ bucket_name = "multitifs"
 
 supabase_folder = f"{SUPABASE_URL}/storage/v1/object/public/{bucket_name}"
 
-GLOBAL_MIN = 273  # Kelvin
-GLOBAL_MAX = 308  # Kelvin
+GLOBAL_MIN = 273.15  # Kelvin
+GLOBAL_MAX = 308.15  # Kelvin
 
 @app.route('/')
 def index():
@@ -85,7 +85,7 @@ def serve_tif_as_png(feature_id, filename):
     try:
         response = supabase.storage.from_(bucket_name).download(tif_path)
         tif_data = io.BytesIO(response)
-        img_bytes = multi_tif_to_png(tif_data)
+        img_bytes = tif_to_png(tif_data)
     except Exception as e:
         print("Error downloading or processing .tif file:", e)
         abort(500)
@@ -109,7 +109,7 @@ def get_latest_lst_tif(feature_id):
         try:
             response = supabase.storage.from_(bucket_name).download(latest_file_path)
             tif_data = io.BytesIO(response)
-            img_bytes = multi_tif_to_png(tif_data)
+            img_bytes = tif_to_png(tif_data)
             return send_file(img_bytes, mimetype='image/png')
         except Exception as e:
             print("Error processing .tif file:", e)
@@ -149,8 +149,14 @@ def get_latest_temperature(feature_id):
 
     if temp_data.empty:
         return jsonify({"error": "No data found"}), 404
+    
+    min_max_values = [temp_data['LST_filter'].min(), temp_data['LST_filter'].max()]
+    
+    return jsonify({
+        "data": temp_data.to_dict(orient='records'),
+        "min_max": min_max_values
+    })
 
-    return temp_data.to_json(orient='records')
 
 
 @app.route('/feature/<feature_id>/get_dates')
@@ -166,8 +172,8 @@ def get_doys(feature_id):
     doys = get_updated_dates(tif_files)  # Assuming extract_metadata returns a dictionary with 'DOY'
     return jsonify(list(reversed(doys)))
 
-@app.route('/feature/<feature_id>/tif/<doy>')
-def get_tif_by_doy(feature_id, doy):
+@app.route('/feature/<feature_id>/tif/<doy>/<scale>')
+def get_tif_by_doy(feature_id, doy, scale):
     data_folder = f"ECO/{feature_id}/lake"
     try:    
         files = supabase.storage.from_(bucket_name).list(data_folder)
@@ -183,7 +189,7 @@ def get_tif_by_doy(feature_id, doy):
             tif_path = f"{data_folder}/{tif_file}"
             response = supabase.storage.from_(bucket_name).download(tif_path)
             tif_data = io.BytesIO(response)
-            img_bytes = multi_tif_to_png(tif_data)
+            img_bytes = tif_to_png(tif_data, scale)
             return send_file(img_bytes, mimetype='image/png')
         
     abort(404)  # No matching DOY found
@@ -218,8 +224,14 @@ def get_temperature_by_doy(feature_id, doy):
 
             if temp_data.empty:
                 return jsonify({"error": "No data found"}), 404
+            
+            min_max_values = [temp_data['LST_filter'].min(), temp_data['LST_filter'].max()]
+            
+            return jsonify({
+                "data": temp_data.to_dict(orient='records'),
+                "min_max": min_max_values
+            })
 
-            return temp_data.to_json(orient='records')
 
 @app.route('/feature/<feature_id>/check_wtoff/<date>')
 def check_wtoff(feature_id, date):
@@ -305,17 +317,18 @@ def normalize(data):
 
     return norm_data, alpha_mask
 
-# Function to convert .tif to .png for display
-def convert_tif_to_png(tif_path):
+# Consolidated function to convert .tif to .png with selectable color scale
+def tif_to_png(tif_path, color_scale="relative"):
     """
     Converts a .tif file to a .png image using different processing methods
-    based on the layer type.
+    based on the selected color scale.
+
+    Parameters:
+        tif_path (str): Path to the .tif file.
+        color_scale (str): Color scale to use ("relative", "hard", "grayscale").
     """
-    # layer_type = extract_layer(tif_path)  # Assumes function exists
     with rasterio.open(tif_path) as dataset:
-
         num_bands = dataset.count
-        # print(f"Number of bands: {num_bands}")
 
         if num_bands < 5:
             # Return a placeholder image indicating the image is missing
@@ -325,149 +338,37 @@ def convert_tif_to_png(tif_path):
             img_bytes.seek(0)
             return img_bytes
 
-        #
-        # THIS IS THE HARDSCALE OUTPUT
-        #
+        if color_scale == "hard":
+            # Hardscale output
+            band = dataset.read(1).astype(np.float32)  # Convert to float for normalization
+            band = np.clip(band, GLOBAL_MIN, GLOBAL_MAX)  # Clip values to valid range
+            norm_band = ((band - GLOBAL_MIN) / (GLOBAL_MAX - GLOBAL_MIN) * 255).astype(np.uint8)
+            alpha_mask = np.where(band <= GLOBAL_MIN, 0, 255).astype(np.uint8)
+            cmap = plt.get_cmap('jet')
+            rgba_img = cmap(norm_band / 255.0)  # Normalize to 0-1 for colormap
+            rgba_img = (rgba_img * 255).astype(np.uint8)
+            rgba_img[..., 3] = alpha_mask  # Apply transparency mask
 
-        # # Read the first band
-        # band = dataset.read(1).astype(np.float32)  # Convert to float for normalization
+        elif color_scale == "relative":
+            # Relative color-coded output
+            bands = [dataset.read(band) for band in range(1, num_bands + 1)]  # Read all bands
+            norm_bands, alpha_mask = zip(*[normalize(band) for band in bands])  # Normalize each band
+            norm_band = norm_bands[0]  # Use the first band for color mapping
+            cmap = plt.get_cmap('jet')
+            rgba_img = cmap(norm_band / 255.0)  # Normalize to 0-1 for colormap
+            rgba_img = (rgba_img * 255).astype(np.uint8)
+            rgba_img[..., 3] = alpha_mask[0]  # Apply transparency mask
 
-        # # Handle no-data values (replace NaNs with 0)
-        # band[np.isnan(band)] = 0  # Ensure NaNs don't affect normalization
+        elif color_scale == "grayscale":
+            # Grayscale output
+            bands = [dataset.read(band) for band in range(1, num_bands + 1)]  # Read all bands
+            norm_bands, alpha_mask = zip(*[normalize(band) for band in bands])  # Normalize each band
+            img_array = np.stack([norm_bands[0], norm_bands[0], norm_bands[0]], axis=-1)  # Grayscale RGB
+            img_array = np.dstack((img_array, alpha_mask[0]))  # Add transparency channel
+            rgba_img = img_array
 
-        # # Normalize band using a fixed global min/max
-        # band = np.clip(band, GLOBAL_MIN, GLOBAL_MAX)  # Clip values to valid range
-        # norm_band = ((band - GLOBAL_MIN) / (GLOBAL_MAX - GLOBAL_MIN) * 255).astype(np.uint8)
-
-        # # Generate an alpha mask: Transparent where band = 0 (or NaN originally)
-        # alpha_mask = np.where(band <= GLOBAL_MIN, 0, 255).astype(np.uint8)
-
-        # # Apply colormap (e.g., 'jet')
-        # cmap = plt.get_cmap('jet')
-        # rgba_img = cmap(norm_band / 255.0)  # Normalize to 0-1 for colormap
-
-        # # Convert to 8-bit per channel
-        # rgba_img = (rgba_img * 255).astype(np.uint8)
-
-        # # **Ensure the alpha channel is set correctly**
-        # rgba_img[..., 3] = alpha_mask  # Apply the transparency mask
-
-
-        #
-        # THIS IS THE RELATIVE COLOR CODED OUTPUT
-        #
-        bands = [dataset.read(band) for band in range(1, num_bands + 1)] # Read all bands
-        norm_bands, alpha_mask = zip(*[normalize(band) for band in bands]) # Normalize each band
-
-        # Color coded output?    
-        # Use the first band for color mapping
-        norm_band = norm_bands[0]
-
-        # Apply a colormap (e.g., 'jet') using matplotlib
-        cmap = plt.get_cmap('jet')
-        rgba_img = cmap(norm_band / 255.0)  # Normalize to 0-1 for colormap
-
-        # Convert to 8-bit per channel
-        rgba_img = (rgba_img * 255).astype(np.uint8)
-
-        # Add transparency channel (alpha)
-        rgba_img[..., 3] = alpha_mask[0]
-
-        #
-        # THIS IS THE GRAYSCALE OUTPUT
-        #
-        # Grayscale custom output
-        # Stack bands as RGB, using only the first band as grayscale
-        # Can add selector for different color combinations and what not
-        # img_array = np.stack([norm_bands[0], norm_bands[0], norm_bands[0]], axis=-1)  # Use bands 0, 3, and 4 as RGB
-        
-        # Add transparency channel (alpha)
-        # img_array = np.dstack((img_array, alpha_mask[0]))
-
-        # Save as PNG
-        img = Image.fromarray(rgba_img, mode="RGBA")
-        img_bytes = io.BytesIO()
-        img.save(img_bytes, format="PNG")
-        img_bytes.seek(0)
-
-    return img_bytes
-
-
-# This thing creates a .png for the .tif file
-def multi_tif_to_png(tif_path):
-    """Converts a multi-band .tif to a .png with transparency for missing data."""
-
-    with rasterio.open(tif_path) as dataset:
-
-        num_bands = dataset.count
-        # print(f"Number of bands: {num_bands}")
-
-        if num_bands < 5:
-            # Return a placeholder image indicating the image is missing
-            img = Image.new('RGBA', (256, 256), (255, 0, 0, 0))  # Red transparent image
-            img_bytes = io.BytesIO()
-            img.save(img_bytes, format="PNG")
-            img_bytes.seek(0)
-            return img_bytes
-
-        #
-        # THIS IS THE HARDSCALE OUTPUT
-        #
-
-        # # Read the first band
-        # band = dataset.read(1).astype(np.float32)  # Convert to float for normalization
-
-        # # Handle no-data values (replace NaNs with 0)
-        # band[np.isnan(band)] = 0  # Ensure NaNs don't affect normalization
-
-        # # Normalize band using a fixed global min/max
-        # band = np.clip(band, GLOBAL_MIN, GLOBAL_MAX)  # Clip values to valid range
-        # norm_band = ((band - GLOBAL_MIN) / (GLOBAL_MAX - GLOBAL_MIN) * 255).astype(np.uint8)
-
-        # # Generate an alpha mask: Transparent where band = 0 (or NaN originally)
-        # alpha_mask = np.where(band <= GLOBAL_MIN, 0, 255).astype(np.uint8)
-
-        # # Apply colormap (e.g., 'jet')
-        # cmap = plt.get_cmap('jet')
-        # rgba_img = cmap(norm_band / 255.0)  # Normalize to 0-1 for colormap
-
-        # # Convert to 8-bit per channel
-        # rgba_img = (rgba_img * 255).astype(np.uint8)
-
-        # # **Ensure the alpha channel is set correctly**
-        # rgba_img[..., 3] = alpha_mask  # Apply the transparency mask
-
-
-        #
-        # THIS IS THE RELATIVE COLOR CODED OUTPUT
-        #
-        bands = [dataset.read(band) for band in range(1, num_bands + 1)] # Read all bands
-        norm_bands, alpha_mask = zip(*[normalize(band) for band in bands]) # Normalize each band
-
-        # Color coded output?    
-        # Use the first band for color mapping
-        norm_band = norm_bands[0]
-
-        # Apply a colormap (e.g., 'jet') using matplotlib
-        cmap = plt.get_cmap('jet')
-        rgba_img = cmap(norm_band / 255.0)  # Normalize to 0-1 for colormap
-
-        # Convert to 8-bit per channel
-        rgba_img = (rgba_img * 255).astype(np.uint8)
-
-        # Add transparency channel (alpha)
-        rgba_img[..., 3] = alpha_mask[0]
-
-        #
-        # THIS IS THE GRAYSCALE OUTPUT
-        #
-        # Grayscale custom output
-        # Stack bands as RGB, using only the first band as grayscale
-        # Can add selector for different color combinations and what not
-        # img_array = np.stack([norm_bands[0], norm_bands[0], norm_bands[0]], axis=-1)  # Use bands 0, 3, and 4 as RGB
-        
-        # Add transparency channel (alpha)
-        # img_array = np.dstack((img_array, alpha_mask[0]))
+        else:
+            raise ValueError(f"Invalid color_scale: {color_scale}. Choose 'relative', 'hard', or 'grayscale'.")
 
         # Save as PNG
         img = Image.fromarray(rgba_img, mode="RGBA")

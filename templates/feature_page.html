@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="icon" href="/static/web_logo.png" type="image/png">
     <style>
         * {
             margin: 0;
@@ -68,12 +69,6 @@
             font-weight: 600;
         }
 
-        /* a {
-            color: #f9a44a;
-            text-decoration: none;
-            transition: color 0.3s;
-        } */
-
         .info-box {
             display: flex;
             flex-direction: column;
@@ -119,7 +114,7 @@
             background: rgba(255, 255, 255, 0.2);
             transform: translateY(-3px);
         }
-/* 
+
         #color-selector-container {
             position: absolute;
             top: 20px;
@@ -139,7 +134,7 @@
             color: #121212;
             font-weight: bold;
             cursor: pointer;
-        } */
+        }
 
         #date-selector-container {
             position: absolute;
@@ -330,9 +325,40 @@
         .view-all-btn:hover {
             background: rgba(66, 135, 245, 1);
         }
+
         th, td {
-  border: 1px solid black;
-}
+            border: 1px solid black;
+        }
+        
+        #color-scale-preview {
+            margin-top: 10px;
+            width: 100%;
+            height: 20px;
+            border-radius: 5px;
+            background: linear-gradient(to right, #000080, #0000ff, #00ffff, #00ff00, #ffff00, #ff0000, #800000);
+            position: relative;
+        }
+
+        .temp-min-max {
+            position: absolute;
+            top: 25px;
+            font-size: 12px;
+            color: white;
+        }
+
+        #min-label {
+            left: 0;
+        }
+
+        #max-label {
+            right: 0;
+        }
+
+        #unit-scale-label {
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
     </style>
 </head>
 <body>
@@ -352,14 +378,23 @@
 
     <div id="color-selector-container">
         <label for="color-selector">Color Scale:</label>
-        <select id="color-selector"></select>
+        <select id="color-selector">
+            <option value="relative">Relative</option>
+            <option value="hard">Hard-scale</option>
+            <option value="gray">Grayscale</option>
+        </select>
+        <div id="color-scale-preview">
+            <span class="temp-min-max" id="min-label">Min</span>
+            <span class="temp-min-max" id="unit-scale-label">K</span>
+            <span class="temp-min-max" id="max-label">Max</span>
+        </div>
     </div>
 
     <div id="graph-container">
         <select id="graph-type-selector" class="graph-type-selector" title="Select graph type">
-            <option value="line">Temperatures</option>
             <option value="summary">Statistics</option>
             <option value="histogram">Distribution</option>
+            <option value="line">Temperatures</option>
             <option value="scatter">Latitude</option>
         </select>
         <canvas id="temperatureChart"></canvas>
@@ -369,9 +404,9 @@
         <h2>Temperature Data for <span id="location-name">{{ feature_id }}</span></h2>
 
         <div class="unit-selector">
-            <button id="kelvin-btn" class="active" onclick="changeUnit('kelvin')">Kelvin</button>
-            <button id="celsius-btn" onclick="changeUnit('celsius')">Celsius</button>
-            <button id="fahrenheit-btn" onclick="changeUnit('fahrenheit')">Fahrenheit</button>
+            <button id="Kelvin-btn" class="active" onclick="changeUnit('Kelvin')">Kelvin</button>
+            <button id="Celsius-btn" onclick="changeUnit('Celsius')">Celsius</button>
+            <button id="Fahrenheit-btn" onclick="changeUnit('Fahrenheit')">Fahrenheit</button>
         </div>
     
         <div id="temperature-boxes">
@@ -399,10 +434,14 @@
         let map;
         let overlay = null; // Declare overlay variable
         let polygon = null; // Declare polygon in a higher scope
-        let currentUnit = 'kelvin';
+        let currentUnit = 'Kelvin';
         let temperatureData = [];
         let tempChart = null;
         const initialDisplayCount = 10;
+        const global_min = 273.15;
+        const global_max = 308.15;
+        let relative_min = 0;
+        let relative_max = 0;
 
         // Initialize the application when DOM is loaded
         document.addEventListener('DOMContentLoaded', function() {
@@ -458,8 +497,12 @@
             });
 
             document.getElementById('date-selector').addEventListener('change', function() {
-                updateOverlay();
                 updateTemperatureData();
+                updateOverlay();
+            });
+
+            document.getElementById('color-selector').addEventListener('change', function() {
+                updateOverlay();
             });
 
             document.getElementById('view-more-btn').addEventListener('click', function() {
@@ -494,29 +537,30 @@
 
         // Temperature conversion functions
         function convertTemperature(tempKelvin, unit) {
-            if (unit === 'celsius') {
+            if (unit === 'Celsius') {
                 return (tempKelvin - 273.15).toFixed(2);
-            } else if (unit === 'fahrenheit') {
+            } else if (unit === 'Fahrenheit') {
                 return ((tempKelvin - 273.15) * 9/5 + 32).toFixed(2);
             }
             return tempKelvin.toFixed(2); // Default to Kelvin
         }
 
         function getUnitSymbol() {
-            return currentUnit === 'kelvin' ? 'K' : 
-                   currentUnit === 'celsius' ? '°C' : '°F';
+            return currentUnit === 'Kelvin' ? 'K' : 
+                   currentUnit === 'Celsius' ? '°C' : '°F';
         }
 
         function changeUnit(unit) {
             currentUnit = unit;
             
             // Update active button state
-            document.getElementById('kelvin-btn').classList.remove('active');
-            document.getElementById('celsius-btn').classList.remove('active');
-            document.getElementById('fahrenheit-btn').classList.remove('active');
+            document.getElementById('Kelvin-btn').classList.remove('active');
+            document.getElementById('Celsius-btn').classList.remove('active');
+            document.getElementById('Fahrenheit-btn').classList.remove('active');
             document.getElementById(`${unit}-btn`).classList.add('active');
             
             updateDisplay();
+            updateOverlay();
         }
 
         // Data fetching
@@ -526,7 +570,6 @@
             return fetch('/feature/{{ feature_id }}/get_dates')
                 .then(response => response.json())
                 .then(dates => {
-                    console.log(dates)
                     const selector = document.getElementById('date-selector');
                     dates.forEach(date => {
                         const option = document.createElement('option');
@@ -557,13 +600,39 @@
                 
         function updateOverlay() {
             const date = document.getElementById('date-selector').value;
-            const newOverlayUrl = `/feature/{{ feature_id }}/tif/${date}`;
+            const colorscale = document.getElementById('color-selector').value;
+            const newOverlayUrl = `/feature/{{ feature_id }}/tif/${date}/${colorscale}`;
+            const preview = document.getElementById('color-scale-preview');
 
             map.eachLayer(function(layer) {
-            if (layer instanceof L.ImageOverlay) {
-                map.removeLayer(layer);
-            }
+                if (layer instanceof L.ImageOverlay) {
+                    map.removeLayer(layer);
+                }
             });
+
+            const converted_global_min = convertTemperature(global_min, currentUnit);
+            const converted_global_max = convertTemperature(global_max, currentUnit);
+            const converted_relative_min = convertTemperature(relative_min, currentUnit);
+            const converted_relative_max = convertTemperature(relative_max, currentUnit);
+
+            const symbol = getUnitSymbol();
+            document.getElementById('unit-scale-label').textContent = `${symbol}`;
+
+            if (colorscale === 'gray') {
+                    preview.style.background = 'linear-gradient(to right, #000, #fff)';
+                    document.getElementById('min-label').textContent = converted_global_min;
+                    document.getElementById('max-label').textContent = converted_global_max;
+                }
+            else if (colorscale === 'hard') {
+                    preview.style.background = 'linear-gradient(to right, #000080, #0000ff, #00ffff, #00ff00, #ffff00, #ff0000, #800000)';
+                    document.getElementById('min-label').textContent = converted_global_min;
+                    document.getElementById('max-label').textContent = converted_global_max;
+                }
+            else if (colorscale === 'relative') {
+                    preview.style.background = 'linear-gradient(to right, #000080, #0000ff, #00ffff, #00ff00, #ffff00, #ff0000, #800000)';
+                    document.getElementById('min-label').textContent = converted_relative_min;
+                    document.getElementById('max-label').textContent = converted_relative_max;
+                }
 
             // Add new overlay and update reference
             overlay = L.imageOverlay(newOverlayUrl, polygon.getBounds()).addTo(map);
@@ -604,11 +673,16 @@
                 throw new Error(data.error);
             }
 
+            temperatureData = data['data'];
+
             // Ensure data is an array and has valid entries
-            temperatureData = Array.isArray(data) && data.length > 0 ? data : [];
+            temperatureData = Array.isArray(temperatureData) && temperatureData.length > 0 ? data : [];
+
+            relative_min = data['min_max'][0];
+            relative_max = data['min_max'][1];
             
             if (temperatureData.length === 0) {
-                console.warn("No temperature data available for the selected date.");
+                console.error("No temperature data available for the selected date.");
             }
             updateDisplay();
             } catch (error) {
@@ -628,7 +702,15 @@
                 throw new Error(data.error);
             }
 
-            temperatureData = Array.isArray(data) ? data : [];
+            temperatureData = data['data'];
+
+            temperatureData = Array.isArray(temperatureData) ? temperatureData : [];
+
+            relative_min = data['min_max'][0];
+            relative_max = data['min_max'][1];
+            document.getElementById('min-label').textContent = relative_min;
+            document.getElementById('max-label').textContent = relative_max;
+
             updateDisplay();
             } catch (error) {
             console.error("Error fetching temperature data:", error);
@@ -709,16 +791,6 @@
             };
 
             switch(graphType) {
-                case 'line':
-                    config.data.datasets.push({
-                        label: `Temperature (${getUnitSymbol()})`,
-                        data: temperatures,
-                        borderColor: '#ff7f0e',
-                        backgroundColor: 'rgba(255, 127, 14, 0.2)',
-                        borderWidth: 2,
-                        fill: true
-                    });
-                    break;
 
                 case 'summary':
                     config.type = 'bar';
@@ -742,6 +814,17 @@
                         label: 'Temperature Distribution',
                         data: histogramData.values,
                         backgroundColor: '#9C27B0'
+                    });
+                    break;
+                    
+                case 'line':
+                    config.data.datasets.push({
+                        label: `Temperature (${getUnitSymbol()})`,
+                        data: temperatures,
+                        borderColor: '#ff7f0e',
+                        backgroundColor: 'rgba(255, 127, 14, 0.2)',
+                        borderWidth: 2,
+                        fill: true
                     });
                     break;
 
@@ -784,21 +867,6 @@
                 labels: labels,
                 values: bins
             };
-        }
-        function changeUnit(unit) {
-            currentUnit = unit;
-            
-            // Update active button state
-            document.getElementById('kelvin-btn').classList.remove('active');
-            document.getElementById('celsius-btn').classList.remove('active');
-            document.getElementById('fahrenheit-btn').classList.remove('active');
-            document.getElementById(`${unit}-btn`).classList.add('active');
-            
-            // Update temperature header
-            const unitSymbol = getUnitSymbol();
-            document.getElementById('temp-header').textContent = `Temp (${unitSymbol})`;
-            
-            updateDisplay();
         }
 
         function switchHeader(newHeader) {
