@@ -380,7 +380,7 @@
         <label for="color-selector">Color Scale:</label>
         <select id="color-selector">
             <option value="relative">Relative</option>
-            <option value="hard">Hard-scale</option>
+            <option value="fixed">Fixed</option>
             <option value="gray">Grayscale</option>
         </select>
         <div id="color-scale-preview">
@@ -623,7 +623,7 @@
                     document.getElementById('min-label').textContent = converted_global_min;
                     document.getElementById('max-label').textContent = converted_global_max;
                 }
-            else if (colorscale === 'hard') {
+            else if (colorscale === 'fixed') {
                     preview.style.background = 'linear-gradient(to right, #000080, #0000ff, #00ffff, #00ff00, #ffff00, #ff0000, #800000)';
                     document.getElementById('min-label').textContent = converted_global_min;
                     document.getElementById('max-label').textContent = converted_global_max;

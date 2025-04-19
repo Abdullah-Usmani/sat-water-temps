@@ -325,7 +325,7 @@ def tif_to_png(tif_path, color_scale="relative"):
 
     Parameters:
         tif_path (str): Path to the .tif file.
-        color_scale (str): Color scale to use ("relative", "hard", "grayscale").
+        color_scale (str): Color scale to use ("relative", "fixed", "grayscale").
     """
     with rasterio.open(tif_path) as dataset:
         num_bands = dataset.count
@@ -338,8 +338,8 @@ def tif_to_png(tif_path, color_scale="relative"):
             img_bytes.seek(0)
             return img_bytes
 
-        if color_scale == "hard":
-            # Hardscale output
+        if color_scale == "fixed":
+            # fixedscale output
             band = dataset.read(1).astype(np.float32)  # Convert to float for normalization
             band[np.isnan(band)] = 0
             band = np.clip(band, GLOBAL_MIN, GLOBAL_MAX)  # Clip values to valid range
@@ -369,7 +369,7 @@ def tif_to_png(tif_path, color_scale="relative"):
             rgba_img = img_array
 
         else:
-            raise ValueError(f"Invalid color_scale: {color_scale}. Choose 'relative', 'hard', or 'grayscale'.")
+            raise ValueError(f"Invalid color_scale: {color_scale}. Choose 'relative', 'fixed', or 'grayscale'.")
 
         # Save as PNG
         img = Image.fromarray(rgba_img, mode="RGBA")
