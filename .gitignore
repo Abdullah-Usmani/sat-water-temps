@@ -1,0 +1,22 @@
+# Python cache files
+__pycache__/
+venv/
+.qodo/
+
+# Environment variables
+.env
+.env.local
+.env.production
+.env.*
+
+# Static & test data
+static/
+
+# Workspace & project-specific files
+GAM4water_0.0.4.R
+ECO_downld_new.R
+sat-water-temps.code-workspace
+
+tif-to-png.py
+test.py
+.qodo

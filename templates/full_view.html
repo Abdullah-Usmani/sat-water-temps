@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/static/web_logo.png" type="image/png">
+    <title>Full Temperature Data</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            text-align: center;
+        }
+        th {
+            background-color: #f9a44a;
+            color: #121212;
+        }
+        tr:nth-child(even) {
+            background-color: rgba(255, 255, 255, 0.03);
+        }
+        tr:hover {
+            background-color: rgba(249, 164, 74, 0.15);
+        }
+        .close-btn {
+            padding: 10px 15px;
+            background: #f44336;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+        .close-btn:hover {
+            background: #d32f2f;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Full Temperature Data</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Point</th>
+                <th>Latitude</th>
+                <th>Longitude</th>
+                <th>Temperature (<span id="unit-symbol">K</span>)</th>
+            </tr>
+        </thead>
+        <tbody id="full-data-table-body"></tbody>
+    </table>
+
+    <button class="close-btn" onclick="window.close();">Close</button>
+
+    <script>
+        let urlParams = new URLSearchParams(window.location.search);
+        let data = JSON.parse(decodeURIComponent(urlParams.get('data')));
+        let unit = urlParams.get('unit') || 'kelvin';
+        let unitSymbol = unit === 'kelvin' ? 'K' : (unit === 'celsius' ? '°C' : '°F');
+
+        document.getElementById("unit-symbol").innerText = unitSymbol;
+
+        function convertTemperature(tempKelvin, unit) {
+            if (unit === 'celsius') {
+                return (tempKelvin - 273.15).toFixed(2);
+            } else if (unit === 'fahrenheit') {
+                return ((tempKelvin - 273.15) * 9/5 + 32).toFixed(2);
+            }
+            return tempKelvin.toFixed(2);
+        }
+
+        function populateTable() {
+            const tableBody = document.getElementById('full-data-table-body');
+            tableBody.innerHTML = "";
+
+            data.forEach((point, index) => {
+                let tempKelvin = parseFloat(point.LST_filter || point.temperature || 0);
+                let temp = convertTemperature(tempKelvin, unit);
+                let lat = parseFloat(point.y || point.latitude || 0).toFixed(4);
+                let lng = parseFloat(point.x || point.longitude || 0).toFixed(4);
+
+                let row = `<tr>
+                    <td>${index + 1}</td>
+                    <td>${lat}</td>
+                    <td>${lng}</td>
+                    <td>${temp}</td>
+                </tr>`;
+                
+                tableBody.innerHTML += row;
+            });
+        }
+
+        populateTable();
+    </script>
+
+</body>
+</html>

@@ -1,30 +1,39 @@
 from flask import Flask, json, jsonify, send_file, render_template, abort
-from flask import Flask, json, jsonify, send_file, render_template, abort
+from dotenv import load_dotenv
 import os
 import io
 import re
-import pandas as pd
 import pandas as pd
 import numpy as np
 import rasterio
 import matplotlib.pyplot as plt
 from PIL import Image
-# from ECO_Converted import extract_metadata 
+from supabase import create_client
 
 app = Flask(__name__)
 
-# Define the external data directory
-root_folder = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\\"
+load_dotenv()
 
-BASE_PATH = "./Water Temp Sensors/ECOraw"  # Adjust path as needed
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+bucket_name = "multitifs"
 
+supabase_folder = f"{SUPABASE_URL}/storage/v1/object/public/{bucket_name}"
 
 GLOBAL_MIN = 273.15  # Kelvin
 GLOBAL_MAX = 308.15  # Kelvin
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    try:
+        response = supabase.storage.from_(bucket_name).download("static/polygons_new.geojson")
+        geojson_data = json.loads(response.decode("utf-8"))
+    except Exception as e:
+        print("Error downloading geojson:", e)
+        geojson_data = None  # Handle the error gracefully
+
+    return render_template('index.html', geojson=json.dumps(geojson_data))
 
 def extract_layer(filename):
     match = re.search(r'ECO_L2T_LSTE\.002_([A-Za-z]+(?:_err)?)_', filename)
@@ -35,11 +44,13 @@ app.jinja_env.filters['extract_layer'] = extract_layer
 
 @app.route('/feature/<feature_id>')
 def feature_page(feature_id):
-    geojson_path = os.path.join(root_folder, 'sat-water-temps', 'static', 'polygons.geojson')  # Adjust path as needed
-
-    # Load GeoJSON and find the lake feature
-    with open(geojson_path, 'r') as f:
-        geojson_data = json.load(f)
+    # # Load GeoJSON and find the lake feature
+    try:
+        response = supabase.storage.from_(bucket_name).download("static/polygons_new.geojson")
+        geojson_data = json.loads(response.decode("utf-8"))
+    except Exception as e:
+        print("Error downloading geojson:", e)
+        abort(500)  # Internal server error
 
     polygon_coords = None
     for feature in geojson_data['features']:
@@ -48,67 +59,94 @@ def feature_page(feature_id):
             break
 
     if polygon_coords is None:
+        print("huh huh")
         abort(404)  # Feature not found
 
     return render_template('feature_page.html', feature_id=feature_id, coords=json.dumps(polygon_coords))
 
 @app.route('/feature/<feature_id>/archive')
 def feature_archive(feature_id):
-    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
+    data_folder = f"ECO/{feature_id}/lake"
     # Add data_folder check for RIVER folder
-
-    if not os.path.isdir(data_folder):
-        abort(404)
-
-    tif_files = [f for f in os.listdir(data_folder) if f.endswith('.tif')]
+    try:
+        files = supabase.storage.from_(bucket_name).list(data_folder)
+        tif_files = [file['name'] for file in files if file['name'].endswith('.tif')]
+    except Exception as e:
+        tif_files = []
+        print("Error fetching .tif files:", e)
     
     return render_template('feature_archive.html', feature_id=feature_id, tif_files=tif_files)
 
+  
 @app.route('/serve_tif_as_png/<feature_id>/<filename>')
 def serve_tif_as_png(feature_id, filename):
-    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
-    tif_path = os.path.join(data_folder, filename)
-
-    if not os.path.exists(tif_path):
-        abort(404)
-
-    img_bytes = tif_to_png(tif_path)
+    data_folder = f"ECO/{feature_id}/lake"
+    tif_path = f"{data_folder}/{filename}"
+    try:
+        response = supabase.storage.from_(bucket_name).download(tif_path)
+        tif_data = io.BytesIO(response)
+        img_bytes = tif_to_png(tif_data)
+    except Exception as e:
+        print("Error downloading or processing .tif file:", e)
+        abort(500)
     return send_file(img_bytes, mimetype='image/png')
 
 @app.route('/latest_lst_tif/<feature_id>/')  # Add route for serving .png files
-def get_latest_lst_tif(feature_id, scale='relative'):
+def get_latest_lst_tif(feature_id):
     """Finds and returns the latest .tif file in the specified folder."""
+    data_folder = f"ECO/{feature_id}/lake"
+    try:
+        files = supabase.storage.from_(bucket_name).list(data_folder)
+        filtered_files = [file['name'] for file in files if file['name'].endswith('.tif')]
+    except Exception as e:
+        filtered_files = []
+        print("Error fetching .tif files:", e)
 
-    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
-
-    filtered_files = [os.path.join(data_folder, file) for file in os.listdir(data_folder) if file.endswith('.tif')]
-
-    # Sort by modification time (newest first)
+    # Sort files alphabetically or by naming convention (Supabase does not provide modification time)
     if filtered_files:
-        filtered_files.sort(key=os.path.getmtime, reverse=True)
-        img_bytes = tif_to_png(filtered_files[0])
-        return send_file(img_bytes, mimetype='image/png')
-    
-    return None  # Return None if no .tif file is found
+        filtered_files.sort()  # Adjust sorting logic if needed
+        latest_file_path = f"{data_folder}/{filtered_files[-1]}"  # Get the latest file (last in sorted list)
+        try:
+            response = supabase.storage.from_(bucket_name).download(latest_file_path)
+            tif_data = io.BytesIO(response)
+            img_bytes = tif_to_png(tif_data)
+            return send_file(img_bytes, mimetype='image/png')
+        except Exception as e:
+            print("Error processing .tif file:", e)
+            abort(500)
 
-    
+    abort(404)  # No .tif files found
+
 @app.route('/feature/<feature_id>/temperature')
 def get_latest_temperature(feature_id):
-    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
-    csv_files = [os.path.join(data_folder, file) for file in os.listdir(data_folder) if file.endswith('.csv')]
+    data_folder = f"ECO/{feature_id}/lake"
+    try:
+        files = supabase.storage.from_(bucket_name).list(data_folder)
+        csv_files = [file['name'] for file in files if file['name'].endswith('.csv')]
+    except Exception as e:
+        csv_files = []
+        print("Error fetching .csv files:", e)
 
     if not csv_files:
         return jsonify({"error": "No CSV files found"}), 404
 
-    csv_files.sort(key=os.path.getmtime, reverse=True)
-    csv_path = csv_files[0]
-    
-    df = pd.read_csv(csv_path)
+    # Assuming the CSV files are sorted by some naming convention, not modification time
+    csv_files.sort()  # Sort alphabetically or by naming convention
+    csv_path = f"{data_folder}/{csv_files[0]}"  # Use the first CSV file
+
+    try:
+        response = supabase.storage.from_(bucket_name).download(csv_path)
+        csv_data = response.decode("utf-8")
+        df = pd.read_csv(io.StringIO(csv_data))
+    except Exception as e:
+        print("Error reading CSV file:", e)
+        return jsonify({"error": "Failed to read CSV file"}), 500
+
     if not {'x', 'y', 'LST_filter'}.issubset(df.columns):
         return jsonify({"error": "CSV file missing required columns"}), 400
 
     temp_data = df[['x', 'y', 'LST_filter']].dropna()
-    
+
     if temp_data.empty:
         return jsonify({"error": "No data found"}), 404
     
@@ -119,45 +157,71 @@ def get_latest_temperature(feature_id):
         "min_max": min_max_values
     })
 
+
+
 @app.route('/feature/<feature_id>/get_dates')
 def get_doys(feature_id):
-    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
-    if not os.path.isdir(data_folder):
-        abort(404)
+    data_folder = f"ECO/{feature_id}/lake"
+    try:
+        files = supabase.storage.from_(bucket_name).list(data_folder)
+        tif_files = [file['name'] for file in files if file['name'].endswith('.tif')]
+    except Exception as e:
+        tif_files = []
+        print("Error fetching .tif files:", e)
 
-    tif_files = [f for f in os.listdir(data_folder) if f.endswith('.tif')]
     doys = get_updated_dates(tif_files)  # Assuming extract_metadata returns a dictionary with 'DOY'
     return jsonify(list(reversed(doys)))
 
 @app.route('/feature/<feature_id>/tif/<doy>/<scale>')
 def get_tif_by_doy(feature_id, doy, scale):
-    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
-    tif_files = [f for f in os.listdir(data_folder) if f.endswith('.tif')]
+    data_folder = f"ECO/{feature_id}/lake"
+    try:    
+        files = supabase.storage.from_(bucket_name).list(data_folder)
+        tif_files = [file['name'] for file in files if file['name'].endswith('.tif')]
+    except Exception as e:
+        tif_files = []
+        print("Error fetching .tif files:", e)
 
     for tif_file in tif_files:
         metadata = extract_metadata(tif_file)
         if metadata[1] == doy:
-            tif_path = os.path.join(data_folder, tif_file)
-            img_bytes = tif_to_png(tif_path, scale)
+            # Construct the virtual path for the .tif file
+            tif_path = f"{data_folder}/{tif_file}"
+            response = supabase.storage.from_(bucket_name).download(tif_path)
+            tif_data = io.BytesIO(response)
+            img_bytes = tif_to_png(tif_data, scale)
             return send_file(img_bytes, mimetype='image/png')
-
+        
     abort(404)  # No matching DOY found
 
 @app.route('/feature/<feature_id>/temperature/<doy>')
 def get_temperature_by_doy(feature_id, doy):
-    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
-    csv_files = [os.path.join(data_folder, file) for file in os.listdir(data_folder) if file.endswith('.csv')]
+    data_folder = f"ECO/{feature_id}/lake"
+    try:    
+        files = supabase.storage.from_(bucket_name).list(data_folder)
+        csv_files = [file['name'] for file in files if file['name'].endswith('.csv')]
+    except Exception as e:
+        csv_files = []
+        print("Error fetching .tif files:", e)
 
     for csv_file in csv_files:
         metadata = extract_metadata(csv_file)
         if metadata[1] == doy:
-            csv_path = os.path.join(data_folder, csv_file)
-            df = pd.read_csv(csv_path)
+            # Construct the virtual path for the .csv file
+            csv_path = f"{data_folder}/{csv_file}"
+            try:
+                response = supabase.storage.from_(bucket_name).download(csv_path)
+                csv_data = response.decode("utf-8")
+                df = pd.read_csv(io.StringIO(csv_data))
+            except Exception as e:
+                print("Error reading CSV file:", e)
+                return jsonify({"error": "Failed to read CSV file"}), 500
+
             if not {'x', 'y', 'LST_filter'}.issubset(df.columns):
                 return jsonify({"error": "CSV file missing required columns"}), 400
 
             temp_data = df[['x', 'y', 'LST_filter']].dropna()
-            
+
             if temp_data.empty:
                 return jsonify({"error": "No data found"}), 404
             
@@ -168,47 +232,57 @@ def get_temperature_by_doy(feature_id, doy):
                 "min_max": min_max_values
             })
 
-            
+
 @app.route('/feature/<feature_id>/check_wtoff/<date>')
 def check_wtoff(feature_id, date):
-    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
-    
-    if not os.path.isdir(data_folder):
-        abort(404)
-
+    data_folder = f"ECO/{feature_id}/lake"
     try:
-        tif_files = [f for f in os.listdir(data_folder) if f.endswith('.tif') and "_wtoff" in f and date in f]
+        files = supabase.storage.from_(bucket_name).list(data_folder)
+        matching_files = [file['name'] for file in files if file['name'].endswith('.tif') and "_wtoff" in file['name'] and date in file['name']]
     except Exception as e:
         print("Error fetching .tif files:", e)
         return jsonify({"error": "Failed to fetch files"}), 500
 
-    if tif_files:
-        return jsonify({"wtoff": False, "files": tif_files})
+    if matching_files:
+        return jsonify({"wtoff": False, "files": matching_files})
     else:
         return jsonify({"wtoff": True})
 
 @app.route('/download_tif/<feature_id>/<filename>')
 def download_tif(feature_id, filename):
-    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
-    file_path = os.path.join(data_folder, filename)
+    data_folder = f"ECO/{feature_id}/lake"
+    file_path = f"{data_folder}/{filename}"
     
-    if os.path.exists(file_path):
-        return send_file(file_path, as_attachment=True)
-    else:
+    try:
+        # Download the file from Supabase storage
+        response = supabase.storage.from_(bucket_name).download(file_path)
+        tif_data = io.BytesIO(response)
+        tif_data.seek(0)  # Ensure the file pointer is at the beginning
+        return send_file(tif_data, as_attachment=True, download_name=filename, mimetype='application/octet-stream')
+    except Exception as e:
+        print("Error downloading .tif file:", e)
         abort(404)
 
 @app.route('/download_csv/<feature_id>/<filename>')
 def download_csv(feature_id, filename):
     filename = filename.replace(".tif", ".csv")  # Change the file extension to .csv
-    
-    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
-    file_path = os.path.join(data_folder, filename)
-    
+    data_folder = f"ECO/{feature_id}/lake"
+    file_path = f"{data_folder}/{filename}"
 
-    if os.path.exists(file_path):
-        return send_file(file_path, as_attachment=True)
-    else:
+    try:
+        # Download the file from Supabase storage
+        response = supabase.storage.from_(bucket_name).download(file_path)
+        csv_data = io.BytesIO(response)
+        csv_data.seek(0)  # Ensure the file pointer is at the beginning
+        return send_file(csv_data, as_attachment=True, download_name=filename, mimetype='application/octet-stream')
+    except Exception as e:
+        print("Error downloading .tif file:", e)
         abort(404)
+
+
+# get all DOYs from the folder
+# show DOYs in selector
+# when DOY is selected, show the image for that DOY
 
 # Function to extract aid number and date from filename
 def extract_metadata(filename):
@@ -304,11 +378,6 @@ def tif_to_png(tif_path, color_scale="relative"):
         img_bytes.seek(0)
 
     return img_bytes
-
-
-@app.route('/feature/full-view')
-def full_view():
-    return render_template('full_view.html')
 
 if __name__ == "__main__":
     app.run(debug=True)
