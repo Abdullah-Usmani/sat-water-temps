@@ -3,16 +3,22 @@ library(terra)
 library(sf)
 library(mgcv)
 
+# At the top of wet_area():
+land <- read.csv("D:/Coding/SEGP/Water_Temp_Sensors_Jephtha/land.csv")
+land$water <- 0
+water <- read.csv("D:/Coding/SEGP/Water_Temp_Sensors_Jephtha/water.csv")
+water$water <- 1
+tr <- rbind(land, water)
+tr$NDVI <- (tr$B8 - tr$B4) / (tr$B8 + tr$B4)
+tr$NDWI <- (tr$B03 - tr$B08) / (tr$B03 + tr$B08)
 
-# Define paths
-wt_polygon <- "D:/Coding/SEGP/Water Temp Sensors_Jephtha/polygon/new_polygons.shp"  # Define a water polygon file
+g1 <- gam(water ~ s(B2,B3,B4) + s(B8) + s(NDVI) + s(NDWI) + s(VV), data = tr, family = "binomial")
 
 args <- commandArgs(trailingOnly=TRUE)
-input_tiff <- args[1]          # filtered raster file
-output_dir <- args[2]          # output folder
+input_tiff <- args[1]
+output_dir <- args[2]
 ref_crs <- if (args[3] == "" || args[3] == "NULL") NULL else args[3]
-AOI_path <- args[4]            # AOI shapefile
-#wt_polygon <- args[5]          # Training shapefile (must have 'wt' column)
+AOI_path <- args[4]
 
 
 
@@ -1273,7 +1279,6 @@ wet_area <- function(wt_path, input_paths, NAval=0, out_path, AOI_path=ROI_path,
 
 # Run GAM4water classification
 wet_area(
-  wt_path = wt_polygon,
   input_paths = input_tiff,
   out_path = output_dir,
   AOI_path = AOI_path,
