@@ -421,7 +421,7 @@
                 </thead>
                 <tbody id="temperature-table-body"></tbody>
             </table>
-            <button id="download-all-btn" class="view-all-btn" href="/feature/{{ feature_id }}/archive">Download All Data</button>
+            <button id="view-more-btn" class="view-all-btn">View More Data</button>
         </div>
         <!-- <div class="info-box" id="archive-box">
             <a href="/feature/{{ feature_id }}/archive" id="archive-text">Archive</a>
@@ -506,6 +506,10 @@
 
             document.getElementById('view-more-btn').addEventListener('click', function() {
                 openFullDataWindow();
+            });
+
+            document.getElementById('download-all-btn').addEventListener('click', function() {
+                window.location.href = "/feature/{{ feature_id }}/archive";
             });
         }
 
