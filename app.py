@@ -1,5 +1,4 @@
 from flask import Flask, json, jsonify, send_file, render_template, abort
-from flask import Flask, json, jsonify, send_file, render_template, abort
 import os
 import io
 import re

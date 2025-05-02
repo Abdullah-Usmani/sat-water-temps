@@ -8,7 +8,7 @@ import geopandas as gpd
 import rasterio
 import numpy as np
 from datetime import datetime, timedelta
-from multiprocessing import Pool, cpu_count
+# from multiprocessing import Pool, cpu_count
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -67,14 +67,14 @@ print("Setting Dates")
 today_date = datetime.now()
 today_date_str = today_date.strftime("%m-%d-%Y")
 # ed = today_date_str
-ed = "03-08-2025"
+ed = "03/20/2025"
 
 
 # Get Yesterday Date as Start Date
 yesterday_date = today_date - timedelta(days=1)
 yesterday_date_str = yesterday_date.strftime("%m-%d-%Y")
 # sd = yesterday_date_str
-sd = "03-03-2025"
+sd = "03/15/2025"
 # sd = "08-01-2023"
 
 # KEY RESULTS TO STORE/LOG
@@ -165,6 +165,7 @@ def download_results(task_id, headers):
         file_id = file['file_id']
         file_name = file['file_name']
         aid_match = re.search(r'aid(\d{4})', file_name)  # Extract aid number from filename
+        local_filename = None
 
         if aid_match:
             aid_number = extract_metadata(file_name)[0] 
@@ -209,6 +210,16 @@ def download_results(task_id, headers):
 
             new_files.append(local_filename)  # Track newly downloaded file
             print(f"Downloaded {local_filename}")
+        
+        file_path = f"updates_{timestamp}.txt"  # Each run creates a new file
+        full_path = os.path.join(log_path, file_path)
+
+        # Ensure the log directory exists
+        os.makedirs(log_path, exist_ok=True)
+
+        # Open the file in append mode to ensure all writes are preserved
+        with open(full_path, 'a', encoding='utf-8') as file:
+            file.write(f"Downloaded {local_filename}\n")  # Log the downloaded file path
 
 # Function to extract aid number and date from filename
 def extract_metadata(filename):
@@ -372,10 +383,23 @@ def process_rasters(aid_number, date, selected_files):
     metadata_file_path = os.path.join(dest_folder_filtered, f"{name}_{location}_metadata.txt")
     with open(metadata_file_path, 'w') as meta_file:
         meta_file.write(str(filter_meta))
+
+    file_path = f"updates_{timestamp}.txt"  # Each run creates a new file
+    full_path = os.path.join(log_path, file_path)
+
+    # Ensure the log directory exists
+    os.makedirs(log_path, exist_ok=True)
+
     print(f"Saved raster metadata: {metadata_file_path}")
 
     print(f"Saved filtered raster: {filter_tif_path}")
     print(f"Finished processing {date}")
+
+    # Open the file in append mode to ensure all writes are preserved
+    with open(full_path, 'a', encoding='utf-8') as file:
+        file.write(f"Filtered CSV {filter_csv_path}\n")  # Log the downloaded file path
+        file.write(f"Filtered TIF {filter_tif_path}\n")  # Log the downloaded file path
+        file.write(f"Filtered metadata {metadata_file_path}\n")  # Log the downloaded file path
 
 # Main function to process all new files using multiprocessing
 def process_all(all_new_files):
@@ -432,7 +456,7 @@ def cleanup_old_files(folder_path, days_old=20):
 
 def log_updates():
     # Open the log file in append mode
-    file_path = f"updates_{timestamp}.txt"  # Each run creates a new file
+    file_path = f"completed_updates_{timestamp}.txt"  # Each run creates a new file
     full_path = os.path.join(log_path, file_path)
 
     # Open the new file and save updates
@@ -478,9 +502,13 @@ def log_updates():
     print(f"Updates saved to {full_path}.")
 
 # Phase 1: Submit task in one go
-# task_request = build_task_request(product, layers, roi_json, sd, ed)
-# task_id = submit_task(headers, task_request)
-task_id = "1b73ef44-9c05-4635-8daa-0fd4fe015b9f" # 03/03/2025 - 03/08/2025
+task_request = build_task_request(product, layers, roi_json, sd, ed)
+task_id = submit_task(headers, task_request)
+# task_id = "1b73ef44-9c05-4635-8daa-0fd4fe015b9f" # 03/03/2025 - 03/08/2025
+# task_id = "750f71d9-ce20-4f10-841b-4151fead00a0" # 03/09/2025 - 03/14/2025
+# task_id = "750f71d9-ce20-4f10-841b-4151fead00a0" # 03/15/2025 - 03/20/2025
+# task_id = "750f71d9-ce20-4f10-841b-4151fead00a0" # 03/21/2025 - 03/26/2025
+# task_id = "750f71d9-ce20-4f10-841b-4151fead00a0" # 03/27/2025 - 04/01/2025
 print(f"Task ID: {task_id}")
 
 # # Phase 2: Create Directories and Mapping
