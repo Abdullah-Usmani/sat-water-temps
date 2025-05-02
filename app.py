@@ -8,7 +8,6 @@ import numpy as np
 import rasterio
 import matplotlib.pyplot as plt
 from PIL import Image
-# from ECO_Converted import extract_metadata 
 
 app = Flask(__name__)
 

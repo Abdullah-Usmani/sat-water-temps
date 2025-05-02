@@ -8,22 +8,8 @@ import geopandas as gpd
 import rasterio
 import numpy as np
 from datetime import datetime, timedelta
-# from multiprocessing import Pool, cpu_count
 from dotenv import load_dotenv
 load_dotenv()
-
-#  File "C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\sat-water-temps\ECO_Converted.py", line 339, in process_rasters
-#     "LST": create_raster(df["LST_filter"].values, LST),
-#            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-#   File "C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\sat-water-temps\ECO_Converted.py", line 336, in create_raster
-#     return data.reshape(rows, cols).astype(np.float32), meta
-#            ^^^^^^^^^^^^^^^^^^^^^^^^
-# ValueError: cannot reshape array of size 0 into shape (227,277)
-
-# add check - if array of size 0, then skip raster processing
-
-# create function to get all files b/w DOYs (start and end) and return a list of files, for getting files for processing
-# def get_files_between_doys(start_doy, end_doy, folder_path):
 
 # Directory paths
 print("Setting Directory Paths")
