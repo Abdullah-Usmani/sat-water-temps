@@ -9,6 +9,7 @@ import rasterio
 import numpy as np
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
+from supabase import create_client, Client
 load_dotenv()
 
 # Directory paths
@@ -421,24 +422,82 @@ def process_all(all_new_files):
 
 # Phase 5: Use this cleanup function after the main processing - cleanup_old_files(raw_path, days_old=20)
 def cleanup_old_files(folder_path, days_old=20):
-
-    # Calculate the cutoff time
+    # Remove files older than 'days_old' days from the local folder
     cutoff_time = datetime.now() - timedelta(days=days_old)
+    for root, _, files in os.walk(folder_path):
+        for filename in files:
+            file_path = os.path.join(root, filename)
+            if os.path.isfile(file_path):
+                file_mod_time = datetime.fromtimestamp(os.path.getmtime(file_path))
+                if file_mod_time < cutoff_time:
+                    os.remove(file_path)
+                    print(f"Deleted {file_path} (last modified on {file_mod_time})")
 
-    # Iterate through each file in the folder
-    for filename in os.listdir(folder_path):
-        file_path = os.path.join(folder_path, filename)
 
-        # Only proceed if it's a file
-        if os.path.isfile(file_path):
+# Local folder version for testing
+def cleanup_old_files_local(folder_path, specified_doy):
+    """
+    Deletes files in the specified local folder that were last modified before the cutoff_date.
+    Args:
+        folder_path (str): The path to the local folder.
+        cutoff_date (datetime): The cutoff date. Files older than this will be deleted.
+    """
+    for root, _, files in os.walk(folder_path):
+        for filename in files:
+            file_path = os.path.join(root, filename)
+            # Extract date from filename using regex: expects ..._[YYYYDOYHHMMSS]...
+            date_match = re.search(r'_(\d{7,13})', filename)
+            if date_match:
+                doy_str = date_match.group(1)
+                # Extract DOY part (characters 5-7, assuming YYYYDOY...)
+                if len(doy_str) >= 7:
+                    doy = int(doy_str[4:7])
+                    if doy < specified_doy:
+                        os.remove(file_path)
+                        print(f"Deleted {file_path} (DOY {doy})")
+            # if os.path.isfile(file_path):
+            #     file_mod_time = datetime.fromtimestamp(os.path.getmtime(file_path))
+            #     if file_mod_time < cutoff_date:
+            #         os.remove(file_path)
+            #         print(f"Deleted {file_path} (last modified on {file_mod_time})")
 
-            # Get the file's modification time
-            file_mod_time = datetime.fromtimestamp(os.path.getmtime(file_path))
+# Delete files older than 1st Feb 2025
+# cutoff_date = datetime(2025, 2, 1)
+filtered_path_2 = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/old-test/ECO/"
+cleanup_old_files_local(filtered_path_2, 32)
 
-            # Delete file if it's older than the cutoff time
-            if file_mod_time < cutoff_time:
-                os.remove(file_path)
-                print(f"Deleted {filename} (last modified on {file_mod_time})")
+def cleanup_old_files_supabase(bucket_name, supabase_url, supabase_key, cutoff_date):
+    """
+    Deletes files in the specified Supabase storage bucket that were last modified before the cutoff_date.
+    Args:
+        bucket_name (str): The name of the Supabase storage bucket.
+        supabase_url (str): The Supabase project URL.
+        supabase_key (str): The Supabase service role key.
+        cutoff_date (datetime): The cutoff date. Files older than this will be deleted.
+    """
+
+    supabase: Client = create_client(supabase_url, supabase_key)
+    # List all files in the bucket
+    files = supabase.storage.from_(bucket_name).list()
+    for file in files:
+        # file['updated_at'] is in ISO format, e.g. '2024-06-01T12:34:56.789Z'
+        # Extract date from filename using regex: expects ..._[YYYYDOYHHMMSS]...
+        date_match = re.search(r'_(\d{7,13})', file['name'])
+        if date_match:
+            doy_str = date_match.group(1)
+            # Extract DOY part (characters 5-7, assuming YYYYDOY...)
+            if len(doy_str) >= 7:
+                doy = int(doy_str[4:7])
+                if doy < 44:
+                    file_path = file['name']
+                    supabase.storage.from_(bucket_name).remove(file_path)
+                    print(f"Deleted {file_path} (DOY {doy})")
+        if 'updated_at' in file and file['updated_at']:
+            file_time = datetime.strptime(file['updated_at'][:19], "%Y-%m-%dT%H:%M:%S")
+            if file_time < cutoff_date:
+                file_path = file['name']
+                supabase.storage.from_(bucket_name).remove(file_path)
+                print(f"Deleted {file_path} (last modified on {file_time})")
 
 def log_updates():
     # Open the log file in append mode
@@ -488,47 +547,47 @@ def log_updates():
     print(f"Updates saved to {full_path}.")
 
 # Phase 1: Submit task in one go
-task_request = build_task_request(product, layers, roi_json, sd, ed)
-task_id = submit_task(headers, task_request)
-# task_id = "1b73ef44-9c05-4635-8daa-0fd4fe015b9f" # 03/03/2025 - 03/08/2025
-# task_id = "750f71d9-ce20-4f10-841b-4151fead00a0" # 03/09/2025 - 03/14/2025
-# task_id = "750f71d9-ce20-4f10-841b-4151fead00a0" # 03/15/2025 - 03/20/2025
-# task_id = "750f71d9-ce20-4f10-841b-4151fead00a0" # 03/21/2025 - 03/26/2025
-# task_id = "750f71d9-ce20-4f10-841b-4151fead00a0" # 03/27/2025 - 04/01/2025
-print(f"Task ID: {task_id}")
+# task_request = build_task_request(product, layers, roi_json, sd, ed)
+# task_id = submit_task(headers, task_request)
+# # task_id = "1b73ef44-9c05-4635-8daa-0fd4fe015b9f" # 03/03/2025 - 03/08/2025
+# # task_id = "750f71d9-ce20-4f10-841b-4151fead00a0" # 03/09/2025 - 03/14/2025
+# # task_id = "750f71d9-ce20-4f10-841b-4151fead00a0" # 03/15/2025 - 03/20/2025
+# # task_id = "750f71d9-ce20-4f10-841b-4151fead00a0" # 03/21/2025 - 03/26/2025
+# # task_id = "750f71d9-ce20-4f10-841b-4151fead00a0" # 03/27/2025 - 04/01/2025
+# print(f"Task ID: {task_id}")
 
-# # Phase 2: Create Directories and Mapping
-aid_folder_mapping = {}  # Initialize mapping outside the loop
-for idx, row in roi.iterrows():
-    print(f"Processing ROI {idx + 1}/{len(roi)}")
+# # # Phase 2: Create Directories and Mapping
+# aid_folder_mapping = {}  # Initialize mapping outside the loop
+# for idx, row in roi.iterrows():
+#     print(f"Processing ROI {idx + 1}/{len(roi)}")
     
-    # Construct directory path for saving data
-    output_folder = os.path.join(raw_path, row['name'], row['location'])
-    os.makedirs(output_folder, exist_ok=True)
-    print(f"Output folder created: {output_folder}")
+#     # Construct directory path for saving data
+#     output_folder = os.path.join(raw_path, row['name'], row['location'])
+#     os.makedirs(output_folder, exist_ok=True)
+#     print(f"Output folder created: {output_folder}")
     
-    # Map aid numbers to output folders
-#    aid_number = f'aid{str(idx + 1).zfill(4)}'  # Construct aid number
-    aid_number = int(idx + 1)  # Construct aid number
-    aid_folder_mapping[int(aid_number)] = (row['name'], row['location'])  # Map aid number to folder
+#     # Map aid numbers to output folders
+# #    aid_number = f'aid{str(idx + 1).zfill(4)}'  # Construct aid number
+#     aid_number = int(idx + 1)  # Construct aid number
+#     aid_folder_mapping[int(aid_number)] = (row['name'], row['location'])  # Map aid number to folder
 
-# Phase 3: Check the status of the single task
-print("All tasks submitted!")
-print("Checking task statuses...")
-status = check_task_status(task_id, headers)
-if status:
-    print(f"Downloading results for Task ID: {task_id}...")
-    download_results(task_id, headers)  # Pass the roi DataFrame for dynamic mapping    
-print("All tasks completed, results downloaded!")
+# # Phase 3: Check the status of the single task
+# print("All tasks submitted!")
+# print("Checking task statuses...")
+# status = check_task_status(task_id, headers)
+# if status:
+#     print(f"Downloading results for Task ID: {task_id}...")
+#     download_results(task_id, headers)  # Pass the roi DataFrame for dynamic mapping    
+# print("All tasks completed, results downloaded!")
 
-# Phase 4: Process the downloaded files
-process_all(new_files)
+# # Phase 4: Process the downloaded files
+# process_all(new_files)
 
 # Phase 5: Cleanup old files
 # cleanup_old_files(raw_path, days_old=20)
 
 # Phase 6: Log updates
-log_updates()
+# log_updates()
 
 def clean_filtered_csvs(filtered_path):
     for root, _, files in os.walk(filtered_path):
