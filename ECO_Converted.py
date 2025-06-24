@@ -14,10 +14,10 @@ load_dotenv()
 
 # Directory paths
 print("Setting Directory Paths")
-raw_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/ECOraw/"
-filtered_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/ECO/"
-roi_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/polygon/new_polygons.shp"
-log_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/logs/"
+raw_path = r"C:\Users\Darren\Desktop\segp\Water Temp Sensors\ECOraw"
+filtered_path = r"C:\Users\Darren\Desktop\segp\Water Temp Sensors\ECO"
+roi_path = r"C:\Users\Darren\Desktop\segp\Water Temp Sensors\polygon\new_polygons.shp"
+log_path = r"C:\Users\Darren\Desktop\segp\Water Temp Sensors\logs"
 
 # Get token (API login via r)
 def get_token(user, password):
@@ -40,8 +40,8 @@ except Exception as e:
     raise ValueError(f"Could not read the shapefile: {e}")
 
 # Define Earthdata login credentials (Replace with your actual credentials)
-user = os.getenv("APPEEARS_USER")
-password = os.getenv("APPEEARS_PASS")
+user = "darennnnn"
+password = "Darennnnnnnn11$"
 
 if not user or not password:
     raise ValueError("Earthdata credentials are not set. Please set APPEEARS_USER and APPEEARS_PASS as environment variables.")
@@ -54,14 +54,14 @@ print("Setting Dates")
 today_date = datetime.now()
 today_date_str = today_date.strftime("%m-%d-%Y")
 # ed = today_date_str
-ed = "03-20-2025"
+ed = "03/20/2025"
 
 
 # Get Yesterday Date as Start Date
 yesterday_date = today_date - timedelta(days=1)
 yesterday_date_str = yesterday_date.strftime("%m-%d-%Y")
 # sd = yesterday_date_str
-sd = "03-15-2025"
+sd = "03/15/2025"
 # sd = "08-01-2023"
 
 # KEY RESULTS TO STORE/LOG
@@ -312,15 +312,7 @@ def process_rasters(aid_number, date, selected_files):
 
     # Water Mask Flag might be Tripping. UbolRatana, NamNgum for example, has water mask = 1 all over, still returning _wtoff
 
-    # If 80% pixels missing, get rid of this download. If (count (pixels that are zero) / total pixels) > 0.8
-    # Delete raw files as well after download, or after cancel. Make a function to delete raw files whenever needed 
-    # if df["LST"].isin([0]):
-
-    if not df["wt"].isin([1]).any():
-        # print("Water not detected.")
-        water_mask_flag = False
-    else:
-        water_mask_flag = True
+    water_mask_flag = df["wt"].isin([1]).any()
 
     # Apply filtering
     for col in ["LST", "LST_err", "QC", "EmisWB", "height"]:
@@ -329,7 +321,7 @@ def process_rasters(aid_number, date, selected_files):
     for col in ["LST_filter", "LST_err_filter", "QC_filter", "EmisWB_filter", "height_filter"]:
         df[f"{col}"] = np.where(df["cloud"] == 1, np.nan, df[col])
 
-    if water_mask_flag:
+    if not water_mask_flag:
         for col in ["LST_filter", "LST_err_filter", "QC_filter", "EmisWB_filter", "height_filter"]:
             df[f"{col}"] = np.where(df["wt"] == 0, np.nan, df[col])
         filter_csv_path = os.path.join(dest_folder_filtered, f"{name}_{location}_{date}_filter_wtoff.csv")
@@ -338,7 +330,6 @@ def process_rasters(aid_number, date, selected_files):
     for col in ["LST", "LST_err", "QC", "EmisWB"]:
         df.drop(columns=[f"{col}"], inplace=True)
 
-    # Trouble-making Line -- Drop rows with NaN in the filtered LST column. Messes up when creating a TIF raster if mismatch in size
     df.dropna(subset=["LST_filter"], inplace=True)
             
     # Save filtered CSV
@@ -346,17 +337,10 @@ def process_rasters(aid_number, date, selected_files):
     multi_files.append(filter_csv_path)
     print(f"Saved filtered CSV: {filter_csv_path}")
 
-     # Convert filtered data back to raster
+    # Convert filtered data back to raster
     def create_raster(data, reference_raster):
         meta = reference_raster.meta.copy()
         meta.update(dtype=rasterio.float32, count=1)
-        # print(f"Creating raster with shape: {data.shape} and meta: {meta}")
-        # Ensure the data can be reshaped to (rows, cols)
-        if data.size != rows * cols:
-            # Fill with np.nan to match the raster size
-            padded = np.full(rows * cols, np.nan, dtype=np.float32)
-            padded[:data.size] = data
-            data = padded
         return data.reshape(rows, cols).astype(np.float32), meta
 
     filtered_rasters = {
@@ -371,6 +355,7 @@ def process_rasters(aid_number, date, selected_files):
     filter_meta = filtered_rasters["LST"][1].copy()
     filter_meta.update(dtype=rasterio.float32, count=len(filtered_rasters))  # Correct band count
 
+    # Save filtered raster
     with rasterio.open(filter_tif_path, "w", **filter_meta) as dst:
         for idx, (key, (data, _)) in enumerate(filtered_rasters.items(), start=1):
             dst.write(data, idx)  # Ensure correct band range
@@ -398,7 +383,6 @@ def process_rasters(aid_number, date, selected_files):
         file.write(f"Filtered CSV {filter_csv_path}\n")  # Log the downloaded file path
         file.write(f"Filtered TIF {filter_tif_path}\n")  # Log the downloaded file path
         file.write(f"Filtered metadata {metadata_file_path}\n")  # Log the downloaded file path
-        file.write(f"Updated AIDs {updated_aids}\n")  # Log the updated AIDs
 
 # Main function to process all new files using multiprocessing
 def process_all(all_new_files):
@@ -410,15 +394,7 @@ def process_all(all_new_files):
     
     print(f"Processing {len(updated_aids)} updated folders...")
 
-    file_path = f"updates_{timestamp}.txt"  # Each run creates a new file
-    full_path = os.path.join(log_path, file_path)
-
-    # Ensure the log directory exists
-    os.makedirs(log_path, exist_ok=True)
-
-    # Open the file in append mode to ensure all writes are preserved
-    with open(full_path, 'a', encoding='utf-8') as file:
-        file.write(f"Updated AIDs {updated_aids}\n")  # Log the updated AIDs
+    # updated_aids = list(updated_aids)
 
     # Process each updated folder and date
     for aid_number in updated_aids:
@@ -432,6 +408,7 @@ def process_all(all_new_files):
             print("No new files to process.")
             continue
         specific_date_files = []
+
         for date in new_dates_get:
             for file in aid_folder_files:
                 if date == extract_metadata(file)[1]:
@@ -479,6 +456,11 @@ def cleanup_old_files_local(folder_path, specified_doy):
             #     if file_mod_time < cutoff_date:
             #         os.remove(file_path)
             #         print(f"Deleted {file_path} (last modified on {file_mod_time})")
+
+# Delete files older than 1st Feb 2025
+# cutoff_date = datetime(2025, 2, 1)
+filtered_path_2 = r"C:\Users\Darren\Desktop\segp\Water Temp Sensors\old-test\ECO"
+cleanup_old_files_local(filtered_path_2, 32)
 
 def cleanup_old_files_supabase(bucket_name, supabase_url, supabase_key, cutoff_date):
     """
@@ -563,29 +545,29 @@ def log_updates():
 # Phase 1: Submit task in one go
 # task_request = build_task_request(product, layers, roi_json, sd, ed)
 # task_id = submit_task(headers, task_request)
-# task_id = "1b73ef44-9c05-4635-8daa-0fd4fe015b9f" # 03/03/2025 - 03/08/2025
-# task_id = "750f71d9-ce20-4f10-841b-4151fead00a0" # 03/09/2025 - 03/14/2025
-# task_id = "750f71d9-ce20-4f10-841b-4151fead00a0" # 03/15/2025 - 03/20/2025
-# task_id = "750f71d9-ce20-4f10-841b-4151fead00a0" # 03/21/2025 - 03/26/2025
-# task_id = "750f71d9-ce20-4f10-841b-4151fead00a0" # 03/27/2025 - 04/01/2025
+# # task_id = "1b73ef44-9c05-4635-8daa-0fd4fe015b9f" # 03/03/2025 - 03/08/2025
+# # task_id = "750f71d9-ce20-4f10-841b-4151fead00a0" # 03/09/2025 - 03/14/2025
+# # task_id = "750f71d9-ce20-4f10-841b-4151fead00a0" # 03/15/2025 - 03/20/2025
+# # task_id = "750f71d9-ce20-4f10-841b-4151fead00a0" # 03/21/2025 - 03/26/2025
+# # task_id = "750f71d9-ce20-4f10-841b-4151fead00a0" # 03/27/2025 - 04/01/2025
 # print(f"Task ID: {task_id}")
 
-# # Phase 2: Create Directories and Mapping
-aid_folder_mapping = {}  # Initialize mapping outside the loop
-for idx, row in roi.iterrows():
-    # print(f"Processing ROI {idx + 1}/{len(roi)}")
+# # # Phase 2: Create Directories and Mapping
+# aid_folder_mapping = {}  # Initialize mapping outside the loop
+# for idx, row in roi.iterrows():
+#     print(f"Processing ROI {idx + 1}/{len(roi)}")
     
-    # Construct directory path for saving data
-    output_folder = os.path.join(raw_path, row['name'], row['location'])
-    os.makedirs(output_folder, exist_ok=True)
-    # print(f"Output folder created: {output_folder}")
+#     # Construct directory path for saving data
+#     output_folder = os.path.join(raw_path, row['name'], row['location'])
+#     os.makedirs(output_folder, exist_ok=True)
+#     print(f"Output folder created: {output_folder}")
     
-    # Map aid numbers to output folders
-#    aid_number = f'aid{str(idx + 1).zfill(4)}'  # Construct aid number
-    aid_number = int(idx + 1)  # Construct aid number
-    aid_folder_mapping[int(aid_number)] = (row['name'], row['location'])  # Map aid number to folder
+#     # Map aid numbers to output folders
+# #    aid_number = f'aid{str(idx + 1).zfill(4)}'  # Construct aid number
+#     aid_number = int(idx + 1)  # Construct aid number
+#     aid_folder_mapping[int(aid_number)] = (row['name'], row['location'])  # Map aid number to folder
 
-# Phase 3: Check the status of the single task
+# # Phase 3: Check the status of the single task
 # print("All tasks submitted!")
 # print("Checking task statuses...")
 # status = check_task_status(task_id, headers)
@@ -594,22 +576,14 @@ for idx, row in roi.iterrows():
 #     download_results(task_id, headers)  # Pass the roi DataFrame for dynamic mapping    
 # print("All tasks completed, results downloaded!")
 
-# Phase 4: Process the downloaded files
-process_all(new_files)
+# # Phase 4: Process the downloaded files
+# process_all(new_files)
 
 # Phase 5: Cleanup old files
 # cleanup_old_files(raw_path, days_old=20)
 
 # Phase 6: Log updates
 # log_updates()
-
-# # Phase 7: Reconstruct the filtered CSVs
-# clean_filtered_csvs(filtered_path)
-
-# Delete files older than 1st Feb 2025
-# cutoff_date = datetime(2025, 2, 1)
-# filtered_path_2 = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/old-test/ECO/"
-# cleanup_old_files_local(filtered_path_2, 32)
 
 def clean_filtered_csvs(filtered_path):
     for root, _, files in os.walk(filtered_path):
@@ -682,3 +656,5 @@ def clean_filtered_tifs(filtered_path):
     # except Exception as e:
     #     print(f"Error processing {csv_path}: {e}")
 
+# # Phase 7: Reconstruct the filtered CSVs
+# clean_filtered_csvs(filtered_path)
