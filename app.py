@@ -12,7 +12,7 @@ from PIL import Image
 app = Flask(__name__)
 
 # Define the external data directory
-root_folder = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\\"
+root_folder = r"C:\Users\Darren\Desktop\segp"
 
 BASE_PATH = "./Water Temp Sensors/ECOraw"  # Adjust path as needed
 
@@ -180,10 +180,7 @@ def check_wtoff(feature_id, date):
         print("Error fetching .tif files:", e)
         return jsonify({"error": "Failed to fetch files"}), 500
 
-    if tif_files:
-        return jsonify({"wtoff": False, "files": tif_files})
-    else:
-        return jsonify({"wtoff": True})
+    return jsonify({"wtoff": bool(tif_files), "files": tif_files})
 
 @app.route('/download_tif/<feature_id>/<filename>')
 def download_tif(feature_id, filename):
