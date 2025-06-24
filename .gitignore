@@ -1,6 +1,7 @@
 # Python cache files
 __pycache__/
 venv/
+.venv/
 .qodo/
 
 # Environment variables
@@ -16,6 +17,7 @@ static/
 GAM4water_0.0.4.R
 ECO_downld_new.R
 sat-water-temps.code-workspace
+test.html
 
 tif-to-png.py
 test.py

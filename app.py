@@ -1,5 +1,4 @@
 from flask import Flask, json, jsonify, send_file, render_template, abort
-from flask import Flask, json, jsonify, send_file, render_template, abort
 import os
 import io
 import re
@@ -9,7 +8,6 @@ import numpy as np
 import rasterio
 import matplotlib.pyplot as plt
 from PIL import Image
-# from ECO_Converted import extract_metadata 
 
 app = Flask(__name__)
 
