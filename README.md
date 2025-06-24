@@ -7,7 +7,7 @@ Prepared by **Group 14**:
 | ----------- | ----------- | ----------- |
 | Abdullah Usmani | 20615297 | hcyau1@nottingham.edu.my |
 | Darren Raj Manuel Raj | 20491070 | hydm2@nottingham.edu.my |
-| Jeptha Ashter Tandri | 20600677 | hcyjt6@nottingham,edu,my |
+| Jeptha Ashter Tandri | 20600677 | hcyjt6@nottingham.edu.my |
 | Muhammad Ahmad Suhail | 20607733 | hcyms5@nottingham.edu.my |
 | Muhammad Syukran Shabaruddin | 20512078 | hcyms4@nottingham.edu.my |
 
