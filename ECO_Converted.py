@@ -24,12 +24,11 @@ supabase_folder = f"{SUPABASE_URL}/storage/v1/object/public/{bucket_name}"
 print("Setting Directory Paths")
 raw_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\"
 filtered_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECO\\"
-roi_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\polygon\new_polygons.shp"
+roi_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\misc\polygon\new_polygons.shp"
 log_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\logs\\"
 
 # Get token (API login via r)
 def get_token(user, password):
-
     #Authenticates with Earthdata and retrieves an authentication token.
     try:
         response = requests.post('https://appeears.earthdatacloud.nasa.gov/api/login', auth=(user, password))
@@ -62,15 +61,14 @@ print("Setting Dates")
 today_date = datetime.now()
 today_date_str = today_date.strftime("%m-%d-%Y")
 # ed = today_date_str
-ed = "06-18-2025"
+ed = "06-24-2025"
 
 
 # Get Yesterday Date as Start Date
 yesterday_date = today_date - timedelta(days=1)
 yesterday_date_str = yesterday_date.strftime("%m-%d-%Y")
 # sd = yesterday_date_str
-sd = "06-13-2025"
-# sd = "08-01-2023"
+sd = "06-19-2025"
 
 # KEY RESULTS TO STORE/LOG
 updated_aids = set()
@@ -185,8 +183,8 @@ def download_results(task_id, headers):
                 with open(local_filename, 'wb') as f:
                     for chunk in download_response.iter_content(chunk_size=8192):
                         f.write(chunk)
-                new_files.append(local_filename)  # Track newly downloaded file
-                print(f"Downloaded {local_filename}")
+                new_files.append(local_filename)  # Track newly downloaded files
+                print(f"Downloaded: {local_filename}")
 
         else:
             # Handle general files without aid numbers (e.g., XML, CSV, JSON)
@@ -203,9 +201,9 @@ def download_results(task_id, headers):
                 for chunk in download_response.iter_content(chunk_size=8192):
                     f.write(chunk)
 
-            new_files.append(local_filename)  # Track newly downloaded file
-            print(f"Downloaded {local_filename}")
-        
+            new_files.append(local_filename)  # Track newly downloaded files
+            print(f"Downloaded: {local_filename}")
+
         file_path = f"updates_{timestamp}.txt"  # Each run creates a new file
         full_path = os.path.join(log_path, file_path)
 
@@ -214,7 +212,7 @@ def download_results(task_id, headers):
 
         # Open the file in append mode to ensure all writes are preserved
         with open(full_path, 'a', encoding='utf-8') as file:
-            file.write(f"Downloaded {local_filename}\n")  # Log the downloaded file path
+            file.write(f"Downloaded: {local_filename}\n")  # Log the file path
 
 # Function to extract aid number and date from filename
 def extract_metadata(filename):
@@ -304,10 +302,17 @@ def process_rasters(aid_number, date, selected_files):
     rows, cols = arrays["LST"].shape
     x, y = np.meshgrid(np.arange(cols), np.arange(rows))
 
+    # Ensure all arrays are not None and have the same shape
+    valid_arrays = {key: arr for key, arr in arrays.items() if arr is not None}
+    shapes = [arr.shape for arr in valid_arrays.values()]
+    if len(set(shapes)) != 1:
+        print(f"Array shape mismatch for aid {aid_number}, date {date}: {shapes}")
+        return
+
     df = pd.DataFrame({
         "x": x.flatten(),
         "y": y.flatten(),
-        **{key: arr.flatten() for key, arr in arrays.items()}
+        **{key: arr.flatten() for key, arr in valid_arrays.items()}
     })
 
     # Save raw CSV
@@ -399,9 +404,9 @@ def process_rasters(aid_number, date, selected_files):
 
     # Open the file in append mode to ensure all writes are preserved
     with open(full_path, 'a', encoding='utf-8') as file:
-        file.write(f"Filtered CSV {filter_csv_path}\n")  # Log the downloaded file path
-        file.write(f"Filtered TIF {filter_tif_path}\n")  # Log the downloaded file path
-        file.write(f"Filtered metadata {metadata_file_path}\n")  # Log the downloaded file path
+        file.write(f"Filtered CSV {filter_csv_path}\n")  # Log the r"file path
+        file.write(f"Filtered TIF {filter_tif_path}\n")  # Log the r"file path
+        file.write(f"Filtered metadata {metadata_file_path}\n")  # Log the r"file path
 
 # Main function to process all new files using multiprocessing
 def process_all(all_new_files):
@@ -451,20 +456,22 @@ def upload_to_supabase(bucket_name, supabase_url, supabase_key, file_path, locat
     os.makedirs(log_path, exist_ok=True)
     
     supabase: Client = create_client(supabase_url, supabase_key)
+    supabase_path = f"ECO/{location}/lake/{os.path.basename(file_path)}"
+
+    # Check if file already exists in Supabase
+    try:
+        existing_files = supabase.storage.from_(bucket_name).list(f"ECO/{location}/lake")
+        if any(f["name"] == os.path.basename(file_path) for f in existing_files):
+            print(f"Skipped upload: {file_path} already exists in Supabase bucket {bucket_name}")
+            with open(full_path, 'a', encoding='utf-8') as log_file:
+                log_file.write(f"Skipped upload: {file_path} already exists in Supabase\n")
+            return
+    except Exception as e:
+        print(f"Error checking existence in Supabase: {e}")
+
     with open(file_path, 'rb') as file:
-        # Determine subdirectory path based on file_path
-        # Example: .../ECO/Ambuclao/lake/filename.tif
-        # Extract subpath after filtered_path or raw_path
-        # if file_path.startswith(filtered_path):
-        #     sub_path = os.path.relpath(file_path, filtered_path)
-        #     supabase_path = f"ECO/{sub_path.replace(os.sep, '/')}"
-        # elif file_path.startswith(raw_path):
-        #     sub_path = os.path.relpath(file_path, raw_path)
-        #     supabase_path = f"ECOraw/{sub_path.replace(os.sep, '/')}"
-        supabase_path = f"ECO/{location}/lake/{os.path.basename(file_path)}"
-        print(supabase_path)
         supabase.storage.from_(bucket_name).upload(supabase_path, file)
-    print(f"Uploaded {file_path} to Supabase bucket {bucket_name}")
+        print(f"Uploaded {file_path} to Supabase bucket {bucket_name}")
     with open(full_path, 'a', encoding='utf-8') as log_file:
         log_file.write(f"Uploaded {file_path} to Supabase\n")  # Log the uploaded file path
 
@@ -503,7 +510,7 @@ def cleanup_old_files_local(folder_path, specified_doy):
                         os.remove(file_path)
                         print(f"Deleted {file_path} (DOY {doy})")
                         with open(full_path, 'a', encoding='utf-8') as log_file:
-                            log_file.write(f"Deleted {file_path} from Supabase\n")  # Log the downloaded file path
+                            log_file.write(f"Deleted {file_path} from Supabase\n")  # Log the r"file path
                             deleted_files.append(file_path)
 
 def cleanup_old_files_supabase(bucket_name, supabase_url, supabase_key, specified_doy, cutoff_date):
@@ -545,11 +552,12 @@ def cleanup_old_files_supabase(bucket_name, supabase_url, supabase_key, specifie
                     current_date = datetime.strptime(timestamp[:8], "%Y%m%d")
                     current_doy = current_date.timetuple().tm_yday
                     if doy < (current_doy - 30):
-                        file_path = file['name']
-                        supabase.storage.from_(bucket_name).remove(file_path)
+                        file_path = f"ECO/{folder['name']}/lake/{file['name']}"
+                        # print(f"Found old file: {file_path} (DOY {doy})")
+                        supabase.storage.from_(bucket_name).remove([file_path])
                         print(f"Deleted {file_path} (DOY {doy})")
                         with open(full_path, 'a', encoding='utf-8') as log_file:
-                            log_file.write(f"Deleted {file_path} from Supabase\n")  # Log the downloaded file path
+                            log_file.write(f"Deleted {file_path} from Supabase\n")  # Log the r"file path
                             deleted_files.append(file_path)
 
 def cleanup_duplicate_filters_by_doy(folder_path):
@@ -639,7 +647,7 @@ task_request = build_task_request(product, layers, roi_json, sd, ed)
 task_id = submit_task(headers, task_request)
 print(f"Task ID: {task_id}")
 
-# # Phase 2: Create Directories and Mapping
+# Phase 2: Create Directories and Mapping
 aid_folder_mapping = {}  # Initialize mapping outside the loop
 for idx, row in roi.iterrows():
     print(f"Processing ROI {idx + 1}/{len(roi)}")
@@ -650,7 +658,6 @@ for idx, row in roi.iterrows():
     print(f"Output folder created: {output_folder}")
 
     # Map aid numbers to output folders
-#    aid_number = f'aid{str(idx + 1).zfill(4)}'  # Construct aid number
     aid_number = int(idx + 1)  # Construct aid number
     aid_folder_mapping[int(aid_number)] = (row['name'], row['location'])  # Map aid number to folder
 
@@ -663,10 +670,12 @@ if status:
     download_results(task_id, headers)  # Pass the roi DataFrame for dynamic mapping    
 print("All tasks completed, results downloaded!")
 
-# # Phase 4: Process the downloaded files
+# # Phase 4: Process the raster files
 process_all(new_files)
 
 # Phase 5: Cleanup old files
+# test_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\misc\2606minus30\ECO\\"
+# cleanup_old_files_local(test_path, 32)
 cleanup_old_files_supabase(bucket_name, SUPABASE_URL, SUPABASE_KEY, 32, datetime(2025, 2, 1))
 
 # Phase 6: Log updates
@@ -674,11 +683,6 @@ log_updates()
 
 # # Phase 7: Reconstruct the filtered CSVs
 # clean_filtered_csvs(filtered_path)
-
-# Delete files older than 1st Feb 2025
-# cutoff_date = datetime(2025, 2, 1)
-# filtered_path_2 = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/old-test/ECO/"
-# cleanup_old_files_local(filtered_path_2, 32)
 
 def clean_filtered_csvs(filtered_path):
     for root, _, files in os.walk(filtered_path):
