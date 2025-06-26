@@ -60,555 +60,19 @@ timestamp = datetime.now().strftime("%Y%m%d_%H%M")
 print("Setting Dates")
 today_date = datetime.now()
 today_date_str = today_date.strftime("%m-%d-%Y")
-# ed = today_date_str
-ed = "06-24-2025"
+ed = today_date_str
+# ed = "06-24-2025"
 
 
 # Get Yesterday Date as Start Date
 yesterday_date = today_date - timedelta(days=1)
 yesterday_date_str = yesterday_date.strftime("%m-%d-%Y")
-# sd = yesterday_date_str
-sd = "06-19-2025"
+sd = yesterday_date_str
+# sd = "06-19-2025"
 
 # KEY RESULTS TO STORE/LOG
 updated_aids = set()
 new_files = []
-new_files = [r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Magat\lake\ECO_L2T_LSTE.002_QC_doy2025170184457_aid0001_51N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Magat\lake\ECO_L2T_LSTE.002_QC_doy2025171175618_aid0001_51N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Magat\lake\ECO_L2T_LSTE.002_cloud_doy2025170184457_aid0001_51N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Magat\lake\ECO_L2T_LSTE.002_cloud_doy2025171175618_aid0001_51N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Magat\lake\ECO_L2T_LSTE.002_water_doy2025170184457_aid0001_51N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Magat\lake\ECO_L2T_LSTE.002_water_doy2025171175618_aid0001_51N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Magat\river\ECO_L2T_LSTE.002_QC_doy2025170184457_aid0002_51N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Magat\river\ECO_L2T_LSTE.002_QC_doy2025171175618_aid0002_51N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Magat\river\ECO_L2T_LSTE.002_cloud_doy2025170184457_aid0002_51N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Magat\river\ECO_L2T_LSTE.002_cloud_doy2025171175618_aid0002_51N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Magat\river\ECO_L2T_LSTE.002_water_doy2025170184457_aid0002_51N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Magat\river\ECO_L2T_LSTE.002_water_doy2025171175618_aid0002_51N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Ambuclao\lake\ECO_L2T_LSTE.002_QC_doy2025170184457_aid0003_50N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Ambuclao\lake\ECO_L2T_LSTE.002_QC_doy2025170184457_aid0003_51N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Ambuclao\lake\ECO_L2T_LSTE.002_cloud_doy2025170184457_aid0003_50N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Ambuclao\lake\ECO_L2T_LSTE.002_cloud_doy2025170184457_aid0003_51N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Ambuclao\lake\ECO_L2T_LSTE.002_water_doy2025170184457_aid0003_50N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Ambuclao\lake\ECO_L2T_LSTE.002_water_doy2025170184457_aid0003_51N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Ambuclao\river\ECO_L2T_LSTE.002_QC_doy2025170184457_aid0004_50N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Ambuclao\river\ECO_L2T_LSTE.002_QC_doy2025170184457_aid0004_51N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Ambuclao\river\ECO_L2T_LSTE.002_cloud_doy2025170184457_aid0004_50N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Ambuclao\river\ECO_L2T_LSTE.002_cloud_doy2025170184457_aid0004_51N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Ambuclao\river\ECO_L2T_LSTE.002_water_doy2025170184457_aid0004_50N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Ambuclao\river\ECO_L2T_LSTE.002_water_doy2025170184457_aid0004_51N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Binga\river\ECO_L2T_LSTE.002_QC_doy2025170184457_aid0005_50N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Binga\river\ECO_L2T_LSTE.002_QC_doy2025170184457_aid0005_51N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Binga\river\ECO_L2T_LSTE.002_cloud_doy2025170184457_aid0005_50N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Binga\river\ECO_L2T_LSTE.002_cloud_doy2025170184457_aid0005_51N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Binga\river\ECO_L2T_LSTE.002_water_doy2025170184457_aid0005_50N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Binga\river\ECO_L2T_LSTE.002_water_doy2025170184457_aid0005_51N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Binga\lake\ECO_L2T_LSTE.002_QC_doy2025170184457_aid0006_50N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Binga\lake\ECO_L2T_LSTE.002_QC_doy2025170184457_aid0006_51N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Binga\lake\ECO_L2T_LSTE.002_cloud_doy2025170184457_aid0006_50N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Binga\lake\ECO_L2T_LSTE.002_cloud_doy2025170184457_aid0006_51N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Binga\lake\ECO_L2T_LSTE.002_water_doy2025170184457_aid0006_50N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Binga\lake\ECO_L2T_LSTE.002_water_doy2025170184457_aid0006_51N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Pantabangan\river\ECO_L2T_LSTE.002_QC_doy2025170184457_aid0007_51N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Pantabangan\river\ECO_L2T_LSTE.002_cloud_doy2025170184457_aid0007_51N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Pantabangan\river\ECO_L2T_LSTE.002_water_doy2025170184457_aid0007_51N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Pantabangan\lake\ECO_L2T_LSTE.002_QC_doy2025170184457_aid0008_51N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Pantabangan\lake\ECO_L2T_LSTE.002_QC_doy2025171175618_aid0008_51N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Pantabangan\lake\ECO_L2T_LSTE.002_cloud_doy2025170184457_aid0008_51N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Pantabangan\lake\ECO_L2T_LSTE.002_cloud_doy2025171175618_aid0008_51N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Pantabangan\lake\ECO_L2T_LSTE.002_water_doy2025170184457_aid0008_51N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Pantabangan\lake\ECO_L2T_LSTE.002_water_doy2025171175618_aid0008_51N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Masiwai\river\ECO_L2T_LSTE.002_QC_doy2025170184457_aid0009_51N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Masiwai\river\ECO_L2T_LSTE.002_cloud_doy2025170184457_aid0009_51N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Masiwai\river\ECO_L2T_LSTE.002_water_doy2025170184457_aid0009_51N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Masiwai\lake\ECO_L2T_LSTE.002_QC_doy2025170184457_aid0010_51N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Masiwai\lake\ECO_L2T_LSTE.002_cloud_doy2025170184457_aid0010_51N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Masiwai\lake\ECO_L2T_LSTE.002_water_doy2025170184457_aid0010_51N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Bakun\river\ECO_L2T_LSTE.002_QC_doy2025171175238_aid0019_49N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Bakun\river\ECO_L2T_LSTE.002_QC_doy2025175161509_aid0019_49N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Bakun\river\ECO_L2T_LSTE.002_cloud_doy2025171175238_aid0019_49N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Bakun\river\ECO_L2T_LSTE.002_cloud_doy2025175161509_aid0019_49N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Bakun\river\ECO_L2T_LSTE.002_water_doy2025171175238_aid0019_49N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Bakun\river\ECO_L2T_LSTE.002_water_doy2025175161509_aid0019_49N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Bakun\lake\ECO_L2T_LSTE.002_EmisWB_doy2025171175238_aid0020_49N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Bakun\lake\ECO_L2T_LSTE.002_EmisWB_doy2025175161509_aid0020_49N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Bakun\lake\ECO_L2T_LSTE.002_LST_doy2025171175238_aid0020_49N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Bakun\lake\ECO_L2T_LSTE.002_LST_doy2025175161509_aid0020_49N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Bakun\lake\ECO_L2T_LSTE.002_LST_err_doy2025171175238_aid0020_49N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Bakun\lake\ECO_L2T_LSTE.002_LST_err_doy2025175161509_aid0020_49N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Bakun\lake\ECO_L2T_LSTE.002_QC_doy2025171175238_aid0020_49N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Bakun\lake\ECO_L2T_LSTE.002_QC_doy2025175161509_aid0020_49N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Bakun\lake\ECO_L2T_LSTE.002_cloud_doy2025171175238_aid0020_49N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Bakun\lake\ECO_L2T_LSTE.002_cloud_doy2025175161509_aid0020_49N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Bakun\lake\ECO_L2T_LSTE.002_height_doy2025171175238_aid0020_49N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Bakun\lake\ECO_L2T_LSTE.002_height_doy2025175161509_aid0020_49N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Bakun\lake\ECO_L2T_LSTE.002_water_doy2025171175238_aid0020_49N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Bakun\lake\ECO_L2T_LSTE.002_water_doy2025175161509_aid0020_49N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Murum\lake\ECO_L2T_LSTE.002_EmisWB_doy2025171175238_aid0021_49N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Murum\lake\ECO_L2T_LSTE.002_EmisWB_doy2025171175238_aid0021_50N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Murum\lake\ECO_L2T_LSTE.002_LST_doy2025171175238_aid0021_49N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Murum\lake\ECO_L2T_LSTE.002_LST_doy2025171175238_aid0021_50N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Murum\lake\ECO_L2T_LSTE.002_LST_err_doy2025171175238_aid0021_49N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Murum\lake\ECO_L2T_LSTE.002_LST_err_doy2025171175238_aid0021_50N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Murum\lake\ECO_L2T_LSTE.002_QC_doy2025171175238_aid0021_49N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Murum\lake\ECO_L2T_LSTE.002_QC_doy2025171175238_aid0021_50N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Murum\lake\ECO_L2T_LSTE.002_QC_doy2025175161509_aid0021_49N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Murum\lake\ECO_L2T_LSTE.002_QC_doy2025175161509_aid0021_50N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Murum\lake\ECO_L2T_LSTE.002_cloud_doy2025171175238_aid0021_49N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Murum\lake\ECO_L2T_LSTE.002_cloud_doy2025171175238_aid0021_50N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Murum\lake\ECO_L2T_LSTE.002_cloud_doy2025175161509_aid0021_49N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Murum\lake\ECO_L2T_LSTE.002_cloud_doy2025175161509_aid0021_50N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Murum\lake\ECO_L2T_LSTE.002_height_doy2025171175238_aid0021_49N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Murum\lake\ECO_L2T_LSTE.002_height_doy2025171175238_aid0021_50N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Murum\lake\ECO_L2T_LSTE.002_water_doy2025171175238_aid0021_49N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Murum\lake\ECO_L2T_LSTE.002_water_doy2025171175238_aid0021_50N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Murum\lake\ECO_L2T_LSTE.002_water_doy2025175161509_aid0021_49N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Murum\lake\ECO_L2T_LSTE.002_water_doy2025175161509_aid0021_50N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Murum\river\ECO_L2T_LSTE.002_QC_doy2025171175238_aid0022_49N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Murum\river\ECO_L2T_LSTE.002_QC_doy2025171175238_aid0022_50N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Murum\river\ECO_L2T_LSTE.002_QC_doy2025175161509_aid0022_49N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Murum\river\ECO_L2T_LSTE.002_QC_doy2025175161509_aid0022_50N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Murum\river\ECO_L2T_LSTE.002_cloud_doy2025171175238_aid0022_49N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Murum\river\ECO_L2T_LSTE.002_cloud_doy2025171175238_aid0022_50N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Murum\river\ECO_L2T_LSTE.002_cloud_doy2025175161509_aid0022_49N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Murum\river\ECO_L2T_LSTE.002_cloud_doy2025175161509_aid0022_50N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Murum\river\ECO_L2T_LSTE.002_water_doy2025171175238_aid0022_49N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Murum\river\ECO_L2T_LSTE.002_water_doy2025171175238_aid0022_50N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Murum\river\ECO_L2T_LSTE.002_water_doy2025175161509_aid0022_49N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Murum\river\ECO_L2T_LSTE.002_water_doy2025175161509_aid0022_50N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\GajahMungkur\lake\ECO_L2T_LSTE.002_QC_doy2025175161224_aid0027_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\GajahMungkur\lake\ECO_L2T_LSTE.002_cloud_doy2025175161224_aid0027_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\GajahMungkur\lake\ECO_L2T_LSTE.002_water_doy2025175161224_aid0027_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\GajahMungkur\river\ECO_L2T_LSTE.002_QC_doy2025175161224_aid0028_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\GajahMungkur\river\ECO_L2T_LSTE.002_cloud_doy2025175161224_aid0028_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\GajahMungkur\river\ECO_L2T_LSTE.002_water_doy2025175161224_aid0028_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\KedungOmbo\river\ECO_L2T_LSTE.002_QC_doy2025175161224_aid0029_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\KedungOmbo\river\ECO_L2T_LSTE.002_cloud_doy2025175161224_aid0029_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\KedungOmbo\river\ECO_L2T_LSTE.002_water_doy2025175161224_aid0029_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\KedungOmbo\lake\ECO_L2T_LSTE.002_QC_doy2025175161224_aid0030_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\KedungOmbo\lake\ECO_L2T_LSTE.002_cloud_doy2025175161224_aid0030_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\KedungOmbo\lake\ECO_L2T_LSTE.002_water_doy2025175161224_aid0030_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\WadukMrica\lake\ECO_L2T_LSTE.002_EmisWB_doy2025175161224_aid0031_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\WadukMrica\lake\ECO_L2T_LSTE.002_LST_doy2025175161224_aid0031_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\WadukMrica\lake\ECO_L2T_LSTE.002_LST_err_doy2025175161224_aid0031_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\WadukMrica\lake\ECO_L2T_LSTE.002_QC_doy2025171174905_aid0031_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\WadukMrica\lake\ECO_L2T_LSTE.002_QC_doy2025171174957_aid0031_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\WadukMrica\lake\ECO_L2T_LSTE.002_QC_doy2025175161132_aid0031_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\WadukMrica\lake\ECO_L2T_LSTE.002_QC_doy2025175161224_aid0031_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\WadukMrica\lake\ECO_L2T_LSTE.002_cloud_doy2025171174905_aid0031_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\WadukMrica\lake\ECO_L2T_LSTE.002_cloud_doy2025171174957_aid0031_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\WadukMrica\lake\ECO_L2T_LSTE.002_cloud_doy2025175161132_aid0031_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\WadukMrica\lake\ECO_L2T_LSTE.002_cloud_doy2025175161224_aid0031_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\WadukMrica\lake\ECO_L2T_LSTE.002_height_doy2025175161224_aid0031_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\WadukMrica\lake\ECO_L2T_LSTE.002_water_doy2025171174905_aid0031_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\WadukMrica\lake\ECO_L2T_LSTE.002_water_doy2025171174957_aid0031_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\WadukMrica\lake\ECO_L2T_LSTE.002_water_doy2025175161132_aid0031_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\WadukMrica\lake\ECO_L2T_LSTE.002_water_doy2025175161224_aid0031_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\WadukMrica\river\ECO_L2T_LSTE.002_EmisWB_doy2025175161224_aid0032_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\WadukMrica\river\ECO_L2T_LSTE.002_LST_doy2025175161224_aid0032_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\WadukMrica\river\ECO_L2T_LSTE.002_LST_err_doy2025175161224_aid0032_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\WadukMrica\river\ECO_L2T_LSTE.002_QC_doy2025171174905_aid0032_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\WadukMrica\river\ECO_L2T_LSTE.002_QC_doy2025171174957_aid0032_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\WadukMrica\river\ECO_L2T_LSTE.002_QC_doy2025175161132_aid0032_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\WadukMrica\river\ECO_L2T_LSTE.002_QC_doy2025175161224_aid0032_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\WadukMrica\river\ECO_L2T_LSTE.002_cloud_doy2025171174905_aid0032_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\WadukMrica\river\ECO_L2T_LSTE.002_cloud_doy2025171174957_aid0032_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\WadukMrica\river\ECO_L2T_LSTE.002_cloud_doy2025175161132_aid0032_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\WadukMrica\river\ECO_L2T_LSTE.002_cloud_doy2025175161224_aid0032_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\WadukMrica\river\ECO_L2T_LSTE.002_height_doy2025175161224_aid0032_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\WadukMrica\river\ECO_L2T_LSTE.002_water_doy2025171174905_aid0032_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\WadukMrica\river\ECO_L2T_LSTE.002_water_doy2025171174957_aid0032_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\WadukMrica\river\ECO_L2T_LSTE.002_water_doy2025175161132_aid0032_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\WadukMrica\river\ECO_L2T_LSTE.002_water_doy2025175161224_aid0032_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sempor\river\ECO_L2T_LSTE.002_EmisWB_doy2025175161224_aid0033_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sempor\river\ECO_L2T_LSTE.002_LST_doy2025175161224_aid0033_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sempor\river\ECO_L2T_LSTE.002_LST_err_doy2025175161224_aid0033_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sempor\river\ECO_L2T_LSTE.002_QC_doy2025171174905_aid0033_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sempor\river\ECO_L2T_LSTE.002_QC_doy2025171174957_aid0033_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sempor\river\ECO_L2T_LSTE.002_QC_doy2025175161132_aid0033_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sempor\river\ECO_L2T_LSTE.002_QC_doy2025175161224_aid0033_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sempor\river\ECO_L2T_LSTE.002_cloud_doy2025171174905_aid0033_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sempor\river\ECO_L2T_LSTE.002_cloud_doy2025171174957_aid0033_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sempor\river\ECO_L2T_LSTE.002_cloud_doy2025175161132_aid0033_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sempor\river\ECO_L2T_LSTE.002_cloud_doy2025175161224_aid0033_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sempor\river\ECO_L2T_LSTE.002_height_doy2025175161224_aid0033_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sempor\river\ECO_L2T_LSTE.002_water_doy2025171174905_aid0033_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sempor\river\ECO_L2T_LSTE.002_water_doy2025171174957_aid0033_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sempor\river\ECO_L2T_LSTE.002_water_doy2025175161132_aid0033_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sempor\river\ECO_L2T_LSTE.002_water_doy2025175161224_aid0033_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sempor\lake\ECO_L2T_LSTE.002_EmisWB_doy2025175161224_aid0034_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sempor\lake\ECO_L2T_LSTE.002_LST_doy2025175161224_aid0034_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sempor\lake\ECO_L2T_LSTE.002_LST_err_doy2025175161224_aid0034_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sempor\lake\ECO_L2T_LSTE.002_QC_doy2025171174905_aid0034_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sempor\lake\ECO_L2T_LSTE.002_QC_doy2025171174957_aid0034_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sempor\lake\ECO_L2T_LSTE.002_QC_doy2025175161132_aid0034_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sempor\lake\ECO_L2T_LSTE.002_QC_doy2025175161224_aid0034_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sempor\lake\ECO_L2T_LSTE.002_cloud_doy2025171174905_aid0034_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sempor\lake\ECO_L2T_LSTE.002_cloud_doy2025171174957_aid0034_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sempor\lake\ECO_L2T_LSTE.002_cloud_doy2025175161132_aid0034_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sempor\lake\ECO_L2T_LSTE.002_cloud_doy2025175161224_aid0034_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sempor\lake\ECO_L2T_LSTE.002_height_doy2025175161224_aid0034_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sempor\lake\ECO_L2T_LSTE.002_water_doy2025171174905_aid0034_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sempor\lake\ECO_L2T_LSTE.002_water_doy2025171174957_aid0034_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sempor\lake\ECO_L2T_LSTE.002_water_doy2025175161132_aid0034_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sempor\lake\ECO_L2T_LSTE.002_water_doy2025175161224_aid0034_49S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatijgde\lake\ECO_L2T_LSTE.002_EmisWB_doy2025175161132_aid0035_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatijgde\lake\ECO_L2T_LSTE.002_LST_doy2025175161132_aid0035_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatijgde\lake\ECO_L2T_LSTE.002_LST_err_doy2025175161132_aid0035_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatijgde\lake\ECO_L2T_LSTE.002_QC_doy2025171174905_aid0035_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatijgde\lake\ECO_L2T_LSTE.002_QC_doy2025171174957_aid0035_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatijgde\lake\ECO_L2T_LSTE.002_QC_doy2025175161132_aid0035_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatijgde\lake\ECO_L2T_LSTE.002_QC_doy2025175161224_aid0035_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatijgde\lake\ECO_L2T_LSTE.002_cloud_doy2025171174905_aid0035_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatijgde\lake\ECO_L2T_LSTE.002_cloud_doy2025171174957_aid0035_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatijgde\lake\ECO_L2T_LSTE.002_cloud_doy2025175161132_aid0035_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatijgde\lake\ECO_L2T_LSTE.002_cloud_doy2025175161224_aid0035_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatijgde\lake\ECO_L2T_LSTE.002_height_doy2025175161132_aid0035_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatijgde\lake\ECO_L2T_LSTE.002_water_doy2025171174905_aid0035_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatijgde\lake\ECO_L2T_LSTE.002_water_doy2025171174957_aid0035_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatijgde\lake\ECO_L2T_LSTE.002_water_doy2025175161132_aid0035_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatijgde\lake\ECO_L2T_LSTE.002_water_doy2025175161224_aid0035_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatijgde\river\ECO_L2T_LSTE.002_EmisWB_doy2025175161132_aid0036_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatijgde\river\ECO_L2T_LSTE.002_LST_doy2025175161132_aid0036_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatijgde\river\ECO_L2T_LSTE.002_LST_err_doy2025175161132_aid0036_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatijgde\river\ECO_L2T_LSTE.002_QC_doy2025171174905_aid0036_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatijgde\river\ECO_L2T_LSTE.002_QC_doy2025171174957_aid0036_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatijgde\river\ECO_L2T_LSTE.002_QC_doy2025175161132_aid0036_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatijgde\river\ECO_L2T_LSTE.002_QC_doy2025175161224_aid0036_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatijgde\river\ECO_L2T_LSTE.002_cloud_doy2025171174905_aid0036_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatijgde\river\ECO_L2T_LSTE.002_cloud_doy2025171174957_aid0036_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatijgde\river\ECO_L2T_LSTE.002_cloud_doy2025175161132_aid0036_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatijgde\river\ECO_L2T_LSTE.002_cloud_doy2025175161224_aid0036_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatijgde\river\ECO_L2T_LSTE.002_height_doy2025175161132_aid0036_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatijgde\river\ECO_L2T_LSTE.002_water_doy2025171174905_aid0036_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatijgde\river\ECO_L2T_LSTE.002_water_doy2025171174957_aid0036_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatijgde\river\ECO_L2T_LSTE.002_water_doy2025175161132_aid0036_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatijgde\river\ECO_L2T_LSTE.002_water_doy2025175161224_aid0036_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sanguling\lake\ECO_L2T_LSTE.002_EmisWB_doy2025175161132_aid0037_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sanguling\lake\ECO_L2T_LSTE.002_LST_doy2025175161132_aid0037_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sanguling\lake\ECO_L2T_LSTE.002_LST_err_doy2025175161132_aid0037_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sanguling\lake\ECO_L2T_LSTE.002_QC_doy2025171174905_aid0037_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sanguling\lake\ECO_L2T_LSTE.002_QC_doy2025175161132_aid0037_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sanguling\lake\ECO_L2T_LSTE.002_QC_doy2025175161224_aid0037_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sanguling\lake\ECO_L2T_LSTE.002_cloud_doy2025171174905_aid0037_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sanguling\lake\ECO_L2T_LSTE.002_cloud_doy2025175161132_aid0037_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sanguling\lake\ECO_L2T_LSTE.002_cloud_doy2025175161224_aid0037_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sanguling\lake\ECO_L2T_LSTE.002_height_doy2025175161132_aid0037_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sanguling\lake\ECO_L2T_LSTE.002_water_doy2025171174905_aid0037_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sanguling\lake\ECO_L2T_LSTE.002_water_doy2025175161132_aid0037_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sanguling\lake\ECO_L2T_LSTE.002_water_doy2025175161224_aid0037_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatiluhur\river\ECO_L2T_LSTE.002_EmisWB_doy2025171174905_aid0038_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatiluhur\river\ECO_L2T_LSTE.002_LST_doy2025171174905_aid0038_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatiluhur\river\ECO_L2T_LSTE.002_LST_err_doy2025171174905_aid0038_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatiluhur\river\ECO_L2T_LSTE.002_QC_doy2025171174905_aid0038_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatiluhur\river\ECO_L2T_LSTE.002_QC_doy2025175161132_aid0038_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatiluhur\river\ECO_L2T_LSTE.002_QC_doy2025175161224_aid0038_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatiluhur\river\ECO_L2T_LSTE.002_cloud_doy2025171174905_aid0038_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatiluhur\river\ECO_L2T_LSTE.002_cloud_doy2025175161132_aid0038_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatiluhur\river\ECO_L2T_LSTE.002_cloud_doy2025175161224_aid0038_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatiluhur\river\ECO_L2T_LSTE.002_height_doy2025171174905_aid0038_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatiluhur\river\ECO_L2T_LSTE.002_water_doy2025171174905_aid0038_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatiluhur\river\ECO_L2T_LSTE.002_water_doy2025175161132_aid0038_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatiluhur\river\ECO_L2T_LSTE.002_water_doy2025175161224_aid0038_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatiluhur\lake\ECO_L2T_LSTE.002_EmisWB_doy2025171174905_aid0039_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatiluhur\lake\ECO_L2T_LSTE.002_EmisWB_doy2025175161132_aid0039_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatiluhur\lake\ECO_L2T_LSTE.002_LST_doy2025171174905_aid0039_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatiluhur\lake\ECO_L2T_LSTE.002_LST_doy2025175161132_aid0039_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatiluhur\lake\ECO_L2T_LSTE.002_LST_err_doy2025171174905_aid0039_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatiluhur\lake\ECO_L2T_LSTE.002_LST_err_doy2025175161132_aid0039_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatiluhur\lake\ECO_L2T_LSTE.002_QC_doy2025171174905_aid0039_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatiluhur\lake\ECO_L2T_LSTE.002_QC_doy2025175161132_aid0039_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatiluhur\lake\ECO_L2T_LSTE.002_QC_doy2025175161224_aid0039_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatiluhur\lake\ECO_L2T_LSTE.002_cloud_doy2025171174905_aid0039_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatiluhur\lake\ECO_L2T_LSTE.002_cloud_doy2025175161132_aid0039_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatiluhur\lake\ECO_L2T_LSTE.002_cloud_doy2025175161224_aid0039_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatiluhur\lake\ECO_L2T_LSTE.002_height_doy2025171174905_aid0039_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatiluhur\lake\ECO_L2T_LSTE.002_height_doy2025175161132_aid0039_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatiluhur\lake\ECO_L2T_LSTE.002_water_doy2025171174905_aid0039_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatiluhur\lake\ECO_L2T_LSTE.002_water_doy2025175161132_aid0039_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Jatiluhur\lake\ECO_L2T_LSTE.002_water_doy2025175161224_aid0039_48S.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\SungaiLayang\river\ECO_L2T_LSTE.002_EmisWB_doy2025173175021_aid0040_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\SungaiLayang\river\ECO_L2T_LSTE.002_LST_doy2025173175021_aid0040_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\SungaiLayang\river\ECO_L2T_LSTE.002_LST_err_doy2025173175021_aid0040_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\SungaiLayang\river\ECO_L2T_LSTE.002_QC_doy2025173175021_aid0040_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\SungaiLayang\river\ECO_L2T_LSTE.002_cloud_doy2025173175021_aid0040_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\SungaiLayang\river\ECO_L2T_LSTE.002_height_doy2025173175021_aid0040_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\SungaiLayang\river\ECO_L2T_LSTE.002_water_doy2025173175021_aid0040_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\SungaiLayang\lake\ECO_L2T_LSTE.002_EmisWB_doy2025173175021_aid0041_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\SungaiLayang\lake\ECO_L2T_LSTE.002_LST_doy2025173175021_aid0041_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\SungaiLayang\lake\ECO_L2T_LSTE.002_LST_err_doy2025173175021_aid0041_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\SungaiLayang\lake\ECO_L2T_LSTE.002_QC_doy2025173175021_aid0041_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\SungaiLayang\lake\ECO_L2T_LSTE.002_cloud_doy2025173175021_aid0041_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\SungaiLayang\lake\ECO_L2T_LSTE.002_height_doy2025173175021_aid0041_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\SungaiLayang\lake\ECO_L2T_LSTE.002_water_doy2025173175021_aid0041_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Pontian\river\ECO_L2T_LSTE.002_QC_doy2025173175021_aid0042_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Pontian\river\ECO_L2T_LSTE.002_cloud_doy2025173175021_aid0042_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Pontian\river\ECO_L2T_LSTE.002_water_doy2025173175021_aid0042_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Pontian\lake\ECO_L2T_LSTE.002_EmisWB_doy2025173175021_aid0043_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Pontian\lake\ECO_L2T_LSTE.002_LST_doy2025173175021_aid0043_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Pontian\lake\ECO_L2T_LSTE.002_LST_err_doy2025173175021_aid0043_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Pontian\lake\ECO_L2T_LSTE.002_QC_doy2025173175021_aid0043_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Pontian\lake\ECO_L2T_LSTE.002_cloud_doy2025173175021_aid0043_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Pontian\lake\ECO_L2T_LSTE.002_height_doy2025173175021_aid0043_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Pontian\lake\ECO_L2T_LSTE.002_water_doy2025173175021_aid0043_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kelinki\lake\ECO_L2T_LSTE.002_QC_doy2025173175021_aid0044_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kelinki\lake\ECO_L2T_LSTE.002_cloud_doy2025173175021_aid0044_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kelinki\lake\ECO_L2T_LSTE.002_water_doy2025173175021_aid0044_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\SungaiSelangor\lake\ECO_L2T_LSTE.002_QC_doy2025173175021_aid0045_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\SungaiSelangor\lake\ECO_L2T_LSTE.002_cloud_doy2025173175021_aid0045_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\SungaiSelangor\lake\ECO_L2T_LSTE.002_water_doy2025173175021_aid0045_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\SungaiSelangor\river\ECO_L2T_LSTE.002_QC_doy2025173175021_aid0046_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\SungaiSelangor\river\ECO_L2T_LSTE.002_cloud_doy2025173175021_aid0046_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\SungaiSelangor\river\ECO_L2T_LSTE.002_water_doy2025173175021_aid0046_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kenyir\river\ECO_L2T_LSTE.002_EmisWB_doy2025173175021_aid0047_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kenyir\river\ECO_L2T_LSTE.002_LST_doy2025173175021_aid0047_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kenyir\river\ECO_L2T_LSTE.002_LST_err_doy2025173175021_aid0047_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kenyir\river\ECO_L2T_LSTE.002_QC_doy2025173175021_aid0047_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kenyir\river\ECO_L2T_LSTE.002_cloud_doy2025173175021_aid0047_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kenyir\river\ECO_L2T_LSTE.002_height_doy2025173175021_aid0047_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kenyir\river\ECO_L2T_LSTE.002_water_doy2025173175021_aid0047_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kenyir\lake\ECO_L2T_LSTE.002_EmisWB_doy2025173175021_aid0048_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kenyir\lake\ECO_L2T_LSTE.002_EmisWB_doy2025173175021_aid0048_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kenyir\lake\ECO_L2T_LSTE.002_LST_doy2025173175021_aid0048_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kenyir\lake\ECO_L2T_LSTE.002_LST_doy2025173175021_aid0048_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kenyir\lake\ECO_L2T_LSTE.002_LST_err_doy2025173175021_aid0048_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kenyir\lake\ECO_L2T_LSTE.002_LST_err_doy2025173175021_aid0048_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kenyir\lake\ECO_L2T_LSTE.002_QC_doy2025173175021_aid0048_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kenyir\lake\ECO_L2T_LSTE.002_QC_doy2025173175021_aid0048_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kenyir\lake\ECO_L2T_LSTE.002_cloud_doy2025173175021_aid0048_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kenyir\lake\ECO_L2T_LSTE.002_cloud_doy2025173175021_aid0048_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kenyir\lake\ECO_L2T_LSTE.002_height_doy2025173175021_aid0048_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kenyir\lake\ECO_L2T_LSTE.002_height_doy2025173175021_aid0048_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kenyir\lake\ECO_L2T_LSTE.002_water_doy2025173175021_aid0048_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kenyir\lake\ECO_L2T_LSTE.002_water_doy2025173175021_aid0048_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Chenderoh\lake\ECO_L2T_LSTE.002_QC_doy2025173175021_aid0049_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Chenderoh\lake\ECO_L2T_LSTE.002_cloud_doy2025173175021_aid0049_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Chenderoh\lake\ECO_L2T_LSTE.002_water_doy2025173175021_aid0049_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Chenderoh\river\ECO_L2T_LSTE.002_QC_doy2025173175021_aid0050_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Chenderoh\river\ECO_L2T_LSTE.002_cloud_doy2025173175021_aid0050_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Chenderoh\river\ECO_L2T_LSTE.002_water_doy2025173175021_aid0050_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\BukitMerah\river\ECO_L2T_LSTE.002_QC_doy2025172183837_aid0051_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\BukitMerah\river\ECO_L2T_LSTE.002_cloud_doy2025172183837_aid0051_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\BukitMerah\river\ECO_L2T_LSTE.002_water_doy2025172183837_aid0051_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\BukitMerah\lake\ECO_L2T_LSTE.002_QC_doy2025172183837_aid0052_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\BukitMerah\lake\ECO_L2T_LSTE.002_cloud_doy2025172183837_aid0052_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\BukitMerah\lake\ECO_L2T_LSTE.002_water_doy2025172183837_aid0052_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kenering\river\ECO_L2T_LSTE.002_QC_doy2025173175021_aid0053_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kenering\river\ECO_L2T_LSTE.002_cloud_doy2025173175021_aid0053_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kenering\river\ECO_L2T_LSTE.002_water_doy2025173175021_aid0053_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kenering\lake\ECO_L2T_LSTE.002_QC_doy2025173175021_aid0054_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kenering\lake\ECO_L2T_LSTE.002_cloud_doy2025173175021_aid0054_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kenering\lake\ECO_L2T_LSTE.002_water_doy2025173175021_aid0054_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Temengor\lake\ECO_L2T_LSTE.002_QC_doy2025173175021_aid0055_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Temengor\lake\ECO_L2T_LSTE.002_cloud_doy2025173175021_aid0055_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Temengor\lake\ECO_L2T_LSTE.002_water_doy2025173175021_aid0055_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Temengor\river\ECO_L2T_LSTE.002_QC_doy2025173175021_aid0056_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Temengor\river\ECO_L2T_LSTE.002_cloud_doy2025173175021_aid0056_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Temengor\river\ECO_L2T_LSTE.002_water_doy2025173175021_aid0056_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Bersia\lake\ECO_L2T_LSTE.002_QC_doy2025173175021_aid0057_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Bersia\lake\ECO_L2T_LSTE.002_cloud_doy2025173175021_aid0057_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Bersia\lake\ECO_L2T_LSTE.002_water_doy2025173175021_aid0057_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Pedu\lake\ECO_L2T_LSTE.002_QC_doy2025172183929_aid0062_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Pedu\lake\ECO_L2T_LSTE.002_cloud_doy2025172183929_aid0062_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Pedu\lake\ECO_L2T_LSTE.002_water_doy2025172183929_aid0062_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\NamTheun2\river\ECO_L2T_LSTE.002_QC_doy2025171193101_aid0087_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\NamTheun2\river\ECO_L2T_LSTE.002_cloud_doy2025171193101_aid0087_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\NamTheun2\river\ECO_L2T_LSTE.002_water_doy2025171193101_aid0087_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\NamNgouang8\river\ECO_L2T_LSTE.002_QC_doy2025171193101_aid0089_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\NamNgouang8\river\ECO_L2T_LSTE.002_cloud_doy2025171193101_aid0089_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\NamNgouang8\river\ECO_L2T_LSTE.002_water_doy2025171193101_aid0089_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\NamNgouang8\lake\ECO_L2T_LSTE.002_QC_doy2025171193101_aid0090_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\NamNgouang8\lake\ECO_L2T_LSTE.002_cloud_doy2025171193101_aid0090_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\NamNgouang8\lake\ECO_L2T_LSTE.002_water_doy2025171193101_aid0090_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\NamTheun1\river\ECO_L2T_LSTE.002_QC_doy2025171193101_aid0091_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\NamTheun1\river\ECO_L2T_LSTE.002_cloud_doy2025171193101_aid0091_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\NamTheun1\river\ECO_L2T_LSTE.002_water_doy2025171193101_aid0091_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\NamTheun1\lake\ECO_L2T_LSTE.002_QC_doy2025171193101_aid0092_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\NamTheun1\lake\ECO_L2T_LSTE.002_cloud_doy2025171193101_aid0092_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\NamTheun1\lake\ECO_L2T_LSTE.002_water_doy2025171193101_aid0092_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\NamNgum2\lake\ECO_L2T_LSTE.002_QC_doy2025171193009_aid0094_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\NamNgum2\lake\ECO_L2T_LSTE.002_QC_doy2025171193101_aid0094_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\NamNgum2\lake\ECO_L2T_LSTE.002_QC_doy2025171193101_aid0094_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\NamNgum2\lake\ECO_L2T_LSTE.002_cloud_doy2025171193009_aid0094_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\NamNgum2\lake\ECO_L2T_LSTE.002_cloud_doy2025171193101_aid0094_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\NamNgum2\lake\ECO_L2T_LSTE.002_cloud_doy2025171193101_aid0094_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\NamNgum2\lake\ECO_L2T_LSTE.002_water_doy2025171193009_aid0094_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\NamNgum2\lake\ECO_L2T_LSTE.002_water_doy2025171193101_aid0094_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\NamNgum2\lake\ECO_L2T_LSTE.002_water_doy2025171193101_aid0094_48N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sirikit\lake\ECO_L2T_LSTE.002_QC_doy2025171193009_aid0098_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sirikit\lake\ECO_L2T_LSTE.002_cloud_doy2025171193009_aid0098_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sirikit\lake\ECO_L2T_LSTE.002_water_doy2025171193009_aid0098_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Taukyekhet2\river\ECO_L2T_LSTE.002_QC_doy2025170201818_aid0109_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Taukyekhet2\river\ECO_L2T_LSTE.002_QC_doy2025170201818_aid0109_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Taukyekhet2\river\ECO_L2T_LSTE.002_cloud_doy2025170201818_aid0109_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Taukyekhet2\river\ECO_L2T_LSTE.002_cloud_doy2025170201818_aid0109_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Taukyekhet2\river\ECO_L2T_LSTE.002_water_doy2025170201818_aid0109_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Taukyekhet2\river\ECO_L2T_LSTE.002_water_doy2025170201818_aid0109_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Taukyekhet2\lake\ECO_L2T_LSTE.002_QC_doy2025170201818_aid0110_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Taukyekhet2\lake\ECO_L2T_LSTE.002_QC_doy2025170201818_aid0110_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Taukyekhet2\lake\ECO_L2T_LSTE.002_cloud_doy2025170201818_aid0110_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Taukyekhet2\lake\ECO_L2T_LSTE.002_cloud_doy2025170201818_aid0110_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Taukyekhet2\lake\ECO_L2T_LSTE.002_water_doy2025170201818_aid0110_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Taukyekhet2\lake\ECO_L2T_LSTE.002_water_doy2025170201818_aid0110_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Mobye\river\ECO_L2T_LSTE.002_QC_doy2025170201818_aid0111_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Mobye\river\ECO_L2T_LSTE.002_cloud_doy2025170201818_aid0111_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Mobye\river\ECO_L2T_LSTE.002_water_doy2025170201818_aid0111_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Mobye\lake\ECO_L2T_LSTE.002_EmisWB_doy2025170201818_aid0112_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Mobye\lake\ECO_L2T_LSTE.002_LST_doy2025170201818_aid0112_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Mobye\lake\ECO_L2T_LSTE.002_LST_err_doy2025170201818_aid0112_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Mobye\lake\ECO_L2T_LSTE.002_QC_doy2025170201818_aid0112_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Mobye\lake\ECO_L2T_LSTE.002_QC_doy2025170201818_aid0112_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Mobye\lake\ECO_L2T_LSTE.002_QC_doy2025170201910_aid0112_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Mobye\lake\ECO_L2T_LSTE.002_cloud_doy2025170201818_aid0112_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Mobye\lake\ECO_L2T_LSTE.002_cloud_doy2025170201818_aid0112_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Mobye\lake\ECO_L2T_LSTE.002_cloud_doy2025170201910_aid0112_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Mobye\lake\ECO_L2T_LSTE.002_height_doy2025170201818_aid0112_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Mobye\lake\ECO_L2T_LSTE.002_water_doy2025170201818_aid0112_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Mobye\lake\ECO_L2T_LSTE.002_water_doy2025170201818_aid0112_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Mobye\lake\ECO_L2T_LSTE.002_water_doy2025170201910_aid0112_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\LowerPaunglaung\river\ECO_L2T_LSTE.002_QC_doy2025170201818_aid0113_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\LowerPaunglaung\river\ECO_L2T_LSTE.002_QC_doy2025170201818_aid0113_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\LowerPaunglaung\river\ECO_L2T_LSTE.002_cloud_doy2025170201818_aid0113_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\LowerPaunglaung\river\ECO_L2T_LSTE.002_cloud_doy2025170201818_aid0113_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\LowerPaunglaung\river\ECO_L2T_LSTE.002_water_doy2025170201818_aid0113_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\LowerPaunglaung\river\ECO_L2T_LSTE.002_water_doy2025170201818_aid0113_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\LowerPaunglaung\lake\ECO_L2T_LSTE.002_QC_doy2025170201818_aid0114_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\LowerPaunglaung\lake\ECO_L2T_LSTE.002_QC_doy2025170201818_aid0114_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\LowerPaunglaung\lake\ECO_L2T_LSTE.002_cloud_doy2025170201818_aid0114_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\LowerPaunglaung\lake\ECO_L2T_LSTE.002_cloud_doy2025170201818_aid0114_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\LowerPaunglaung\lake\ECO_L2T_LSTE.002_water_doy2025170201818_aid0114_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\LowerPaunglaung\lake\ECO_L2T_LSTE.002_water_doy2025170201818_aid0114_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kyee-on-Kyee-wa\lake\ECO_L2T_LSTE.002_EmisWB_doy2025173192856_aid0115_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kyee-on-Kyee-wa\lake\ECO_L2T_LSTE.002_LST_doy2025173192856_aid0115_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kyee-on-Kyee-wa\lake\ECO_L2T_LSTE.002_LST_err_doy2025173192856_aid0115_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kyee-on-Kyee-wa\lake\ECO_L2T_LSTE.002_QC_doy2025173192856_aid0115_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kyee-on-Kyee-wa\lake\ECO_L2T_LSTE.002_cloud_doy2025173192856_aid0115_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kyee-on-Kyee-wa\lake\ECO_L2T_LSTE.002_height_doy2025173192856_aid0115_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kyee-on-Kyee-wa\lake\ECO_L2T_LSTE.002_water_doy2025173192856_aid0115_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kyee-on-Kyee-wa\river\ECO_L2T_LSTE.002_QC_doy2025173192856_aid0116_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kyee-on-Kyee-wa\river\ECO_L2T_LSTE.002_cloud_doy2025173192856_aid0116_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kyee-on-Kyee-wa\river\ECO_L2T_LSTE.002_water_doy2025173192856_aid0116_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Mone\river\ECO_L2T_LSTE.002_QC_doy2025173192856_aid0117_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Mone\river\ECO_L2T_LSTE.002_cloud_doy2025173192856_aid0117_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Mone\river\ECO_L2T_LSTE.002_water_doy2025173192856_aid0117_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Mone\lake\ECO_L2T_LSTE.002_EmisWB_doy2025173192856_aid0118_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Mone\lake\ECO_L2T_LSTE.002_LST_doy2025173192856_aid0118_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Mone\lake\ECO_L2T_LSTE.002_LST_err_doy2025173192856_aid0118_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Mone\lake\ECO_L2T_LSTE.002_QC_doy2025173192856_aid0118_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Mone\lake\ECO_L2T_LSTE.002_cloud_doy2025173192856_aid0118_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Mone\lake\ECO_L2T_LSTE.002_height_doy2025173192856_aid0118_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Mone\lake\ECO_L2T_LSTE.002_water_doy2025173192856_aid0118_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kinda\river\ECO_L2T_LSTE.002_QC_doy2025170201818_aid0119_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kinda\river\ECO_L2T_LSTE.002_QC_doy2025170201818_aid0119_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kinda\river\ECO_L2T_LSTE.002_QC_doy2025170201910_aid0119_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kinda\river\ECO_L2T_LSTE.002_QC_doy2025173192948_aid0119_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kinda\river\ECO_L2T_LSTE.002_cloud_doy2025170201818_aid0119_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kinda\river\ECO_L2T_LSTE.002_cloud_doy2025170201818_aid0119_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kinda\river\ECO_L2T_LSTE.002_cloud_doy2025170201910_aid0119_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kinda\river\ECO_L2T_LSTE.002_cloud_doy2025173192948_aid0119_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kinda\river\ECO_L2T_LSTE.002_water_doy2025170201818_aid0119_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kinda\river\ECO_L2T_LSTE.002_water_doy2025170201818_aid0119_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kinda\river\ECO_L2T_LSTE.002_water_doy2025170201910_aid0119_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kinda\river\ECO_L2T_LSTE.002_water_doy2025173192948_aid0119_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kinda\lake\ECO_L2T_LSTE.002_QC_doy2025170201818_aid0120_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kinda\lake\ECO_L2T_LSTE.002_QC_doy2025170201818_aid0120_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kinda\lake\ECO_L2T_LSTE.002_QC_doy2025170201910_aid0120_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kinda\lake\ECO_L2T_LSTE.002_QC_doy2025173192948_aid0120_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kinda\lake\ECO_L2T_LSTE.002_cloud_doy2025170201818_aid0120_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kinda\lake\ECO_L2T_LSTE.002_cloud_doy2025170201818_aid0120_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kinda\lake\ECO_L2T_LSTE.002_cloud_doy2025170201910_aid0120_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kinda\lake\ECO_L2T_LSTE.002_cloud_doy2025173192948_aid0120_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kinda\lake\ECO_L2T_LSTE.002_water_doy2025170201818_aid0120_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kinda\lake\ECO_L2T_LSTE.002_water_doy2025170201818_aid0120_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kinda\lake\ECO_L2T_LSTE.002_water_doy2025170201910_aid0120_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Kinda\lake\ECO_L2T_LSTE.002_water_doy2025173192948_aid0120_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\MyoGyi\river\ECO_L2T_LSTE.002_QC_doy2025170201818_aid0121_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\MyoGyi\river\ECO_L2T_LSTE.002_QC_doy2025170201818_aid0121_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\MyoGyi\river\ECO_L2T_LSTE.002_QC_doy2025170201910_aid0121_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\MyoGyi\river\ECO_L2T_LSTE.002_QC_doy2025173192948_aid0121_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\MyoGyi\river\ECO_L2T_LSTE.002_cloud_doy2025170201818_aid0121_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\MyoGyi\river\ECO_L2T_LSTE.002_cloud_doy2025170201818_aid0121_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\MyoGyi\river\ECO_L2T_LSTE.002_cloud_doy2025170201910_aid0121_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\MyoGyi\river\ECO_L2T_LSTE.002_cloud_doy2025173192948_aid0121_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\MyoGyi\river\ECO_L2T_LSTE.002_water_doy2025170201818_aid0121_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\MyoGyi\river\ECO_L2T_LSTE.002_water_doy2025170201818_aid0121_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\MyoGyi\river\ECO_L2T_LSTE.002_water_doy2025170201910_aid0121_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\MyoGyi\river\ECO_L2T_LSTE.002_water_doy2025173192948_aid0121_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\MyoGyi\lake\ECO_L2T_LSTE.002_QC_doy2025170201818_aid0122_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\MyoGyi\lake\ECO_L2T_LSTE.002_QC_doy2025170201818_aid0122_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\MyoGyi\lake\ECO_L2T_LSTE.002_QC_doy2025170201910_aid0122_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\MyoGyi\lake\ECO_L2T_LSTE.002_QC_doy2025173192948_aid0122_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\MyoGyi\lake\ECO_L2T_LSTE.002_cloud_doy2025170201818_aid0122_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\MyoGyi\lake\ECO_L2T_LSTE.002_cloud_doy2025170201818_aid0122_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\MyoGyi\lake\ECO_L2T_LSTE.002_cloud_doy2025170201910_aid0122_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\MyoGyi\lake\ECO_L2T_LSTE.002_cloud_doy2025173192948_aid0122_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\MyoGyi\lake\ECO_L2T_LSTE.002_water_doy2025170201818_aid0122_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\MyoGyi\lake\ECO_L2T_LSTE.002_water_doy2025170201818_aid0122_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\MyoGyi\lake\ECO_L2T_LSTE.002_water_doy2025170201910_aid0122_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\MyoGyi\lake\ECO_L2T_LSTE.002_water_doy2025173192948_aid0122_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sedawgyi\river\ECO_L2T_LSTE.002_QC_doy2025170201818_aid0123_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sedawgyi\river\ECO_L2T_LSTE.002_QC_doy2025170201818_aid0123_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sedawgyi\river\ECO_L2T_LSTE.002_QC_doy2025170201910_aid0123_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sedawgyi\river\ECO_L2T_LSTE.002_QC_doy2025170201910_aid0123_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sedawgyi\river\ECO_L2T_LSTE.002_QC_doy2025173192948_aid0123_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sedawgyi\river\ECO_L2T_LSTE.002_cloud_doy2025170201818_aid0123_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sedawgyi\river\ECO_L2T_LSTE.002_cloud_doy2025170201818_aid0123_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sedawgyi\river\ECO_L2T_LSTE.002_cloud_doy2025170201910_aid0123_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sedawgyi\river\ECO_L2T_LSTE.002_cloud_doy2025170201910_aid0123_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sedawgyi\river\ECO_L2T_LSTE.002_cloud_doy2025173192948_aid0123_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sedawgyi\river\ECO_L2T_LSTE.002_water_doy2025170201818_aid0123_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sedawgyi\river\ECO_L2T_LSTE.002_water_doy2025170201818_aid0123_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sedawgyi\river\ECO_L2T_LSTE.002_water_doy2025170201910_aid0123_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sedawgyi\river\ECO_L2T_LSTE.002_water_doy2025170201910_aid0123_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sedawgyi\river\ECO_L2T_LSTE.002_water_doy2025173192948_aid0123_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sedawgyi\lake\ECO_L2T_LSTE.002_QC_doy2025170201818_aid0124_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sedawgyi\lake\ECO_L2T_LSTE.002_QC_doy2025170201818_aid0124_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sedawgyi\lake\ECO_L2T_LSTE.002_QC_doy2025170201910_aid0124_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sedawgyi\lake\ECO_L2T_LSTE.002_QC_doy2025170201910_aid0124_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sedawgyi\lake\ECO_L2T_LSTE.002_QC_doy2025173192948_aid0124_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sedawgyi\lake\ECO_L2T_LSTE.002_cloud_doy2025170201818_aid0124_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sedawgyi\lake\ECO_L2T_LSTE.002_cloud_doy2025170201818_aid0124_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sedawgyi\lake\ECO_L2T_LSTE.002_cloud_doy2025170201910_aid0124_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sedawgyi\lake\ECO_L2T_LSTE.002_cloud_doy2025170201910_aid0124_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sedawgyi\lake\ECO_L2T_LSTE.002_cloud_doy2025173192948_aid0124_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sedawgyi\lake\ECO_L2T_LSTE.002_water_doy2025170201818_aid0124_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sedawgyi\lake\ECO_L2T_LSTE.002_water_doy2025170201818_aid0124_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sedawgyi\lake\ECO_L2T_LSTE.002_water_doy2025170201910_aid0124_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sedawgyi\lake\ECO_L2T_LSTE.002_water_doy2025170201910_aid0124_47N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Sedawgyi\lake\ECO_L2T_LSTE.002_water_doy2025173192948_aid0124_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Thaphanseik\river\ECO_L2T_LSTE.002_QC_doy2025173192948_aid0125_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Thaphanseik\river\ECO_L2T_LSTE.002_cloud_doy2025173192948_aid0125_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Thaphanseik\river\ECO_L2T_LSTE.002_water_doy2025173192948_aid0125_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Thaphanseik\lake\ECO_L2T_LSTE.002_EmisWB_doy2025173192948_aid0126_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Thaphanseik\lake\ECO_L2T_LSTE.002_LST_doy2025173192948_aid0126_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Thaphanseik\lake\ECO_L2T_LSTE.002_LST_err_doy2025173192948_aid0126_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Thaphanseik\lake\ECO_L2T_LSTE.002_QC_doy2025173192948_aid0126_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Thaphanseik\lake\ECO_L2T_LSTE.002_cloud_doy2025173192948_aid0126_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Thaphanseik\lake\ECO_L2T_LSTE.002_height_doy2025173192948_aid0126_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Thaphanseik\lake\ECO_L2T_LSTE.002_water_doy2025173192948_aid0126_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Myittha\river\ECO_L2T_LSTE.002_QC_doy2025173192856_aid0127_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Myittha\river\ECO_L2T_LSTE.002_QC_doy2025173192948_aid0127_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Myittha\river\ECO_L2T_LSTE.002_cloud_doy2025173192856_aid0127_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Myittha\river\ECO_L2T_LSTE.002_cloud_doy2025173192948_aid0127_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Myittha\river\ECO_L2T_LSTE.002_water_doy2025173192856_aid0127_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Myittha\river\ECO_L2T_LSTE.002_water_doy2025173192948_aid0127_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Myittha\lake\ECO_L2T_LSTE.002_QC_doy2025173192856_aid0128_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Myittha\lake\ECO_L2T_LSTE.002_QC_doy2025173192948_aid0128_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Myittha\lake\ECO_L2T_LSTE.002_cloud_doy2025173192856_aid0128_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Myittha\lake\ECO_L2T_LSTE.002_cloud_doy2025173192948_aid0128_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Myittha\lake\ECO_L2T_LSTE.002_water_doy2025173192856_aid0128_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\Myittha\lake\ECO_L2T_LSTE.002_water_doy2025173192948_aid0128_46N.tif",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\ECO-L2T-LSTE-002-QC-lookup_20250626_1137.csv",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\ECO-L2T-LSTE-002-cloud-lookup_20250626_1137.csv",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\ECO-L2T-LSTE-002-QC-Statistics-QA_20250626_1137.csv",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\ECO-L2T-LSTE-002-cloud-Statistics-QA_20250626_1137.csv",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\ECO-L2T-LSTE-002-Statistics_20250626_1137.csv",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\ECOStress-Request-granule-list_20250626_1137.txt",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\ECOStress-Request-request_20250626_1137.json",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\ECOStress-Request-ECO-L2T-LSTE-002-metadata_20250626_1137.xml",
-r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw\\README_20250626_1137.md",
-]
-updated_aids=[128, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 19, 20, 21, 22, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 62, 87, 89, 90, 91, 92, 94, 98, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127]
 multi_aids = set()
 multi_files = []
 deleted_files = []
@@ -859,11 +323,19 @@ def process_rasters(aid_number, date, selected_files):
     filter_csv_path = os.path.join(dest_folder_filtered, f"{name}_{location}_{date}_filter.csv")
     filter_tif_path = os.path.join(dest_folder_filtered, f"{name}_{location}_{date}_filter.tif")
 
-    # Water Mask Flag might be Tripping. UbolRatana, NamNgum for example, has water mask = 1 all over, still returning _wtoff
+    # Count total pixels as those with any value (not NaN)
+    valid_pixels = df["LST"].notna().sum()
+    print(f"Valid raw pixels for {date} (aid {aid_number}): {valid_pixels}")
+    # Zero pixels are those with invalid or no values at all (NaN)
+    invalid_pixels = df["LST"].isna().sum()
+    print(f"Invalid raw pixels for {date} (aid {aid_number}): {invalid_pixels}")
 
-    # If 80% pixels missing, get rid of this download. If (count (pixels that are zero) / total pixels) > 0.8
-    # Delete raw files as well after download, or after cancel. Make a function to delete raw files whenever needed 
-    # if df["LST"].isin([0]):
+    total_pixels = valid_pixels + invalid_pixels
+    print(f"Total raw pixels for {date} (aid {aid_number}): {total_pixels}")
+
+    if total_pixels > 0 and (invalid_pixels / (total_pixels) > 0.8):
+        print(f"Skipping {date} for aid {aid_number}: more than 80% of raw pixels are invalid.")
+        return
 
     if not df["wt"].isin([1]).any():
         # print("Water not detected.")
@@ -886,6 +358,20 @@ def process_rasters(aid_number, date, selected_files):
 
     for col in ["LST", "LST_err", "QC", "EmisWB"]:
         df.drop(columns=[f"{col}"], inplace=True)
+
+    # Count total pixels as those with any value (not NaN)
+    valid_pixels = df["LST_filter"].notna().sum()
+    print(f"Valid filtered pixels for {date} (aid {aid_number}): {valid_pixels}")
+    # Zero pixels are those with invalid or no values at all (NaN)
+    invalid_pixels = df["LST_filter"].isna().sum()
+    print(f"Invalid filtered pixels for {date} (aid {aid_number}): {invalid_pixels}")
+
+    total_pixels = valid_pixels + invalid_pixels
+    print(f"Total filtered pixels for {date} (aid {aid_number}): {total_pixels}")
+
+    if total_pixels > 0 and (invalid_pixels / (total_pixels) > 0.8):
+        print(f"Skipping {date} for aid {aid_number}: more than 80% of filtered pixels are invalid.")
+        return
 
      # Convert filtered data back to raster
     def create_raster(data, reference_raster):
@@ -993,7 +479,6 @@ def upload_to_supabase(bucket_name, supabase_url, supabase_key, file_path, name,
     
     supabase: Client = create_client(supabase_url, supabase_key)
     supabase_path = f"ECO/{name}/{location}/{os.path.basename(file_path)}"
-    print(supabase_path)
     # Check if file already exists in Supabase
     try:
         existing_files = supabase.storage.from_(bucket_name).list(f"ECO/{name}/{location}")
@@ -1010,9 +495,6 @@ def upload_to_supabase(bucket_name, supabase_url, supabase_key, file_path, name,
         print(f"Uploaded {file_path} to Supabase bucket {bucket_name}")
     with open(full_path, 'a', encoding='utf-8') as log_file:
         log_file.write(f"Uploaded {file_path} to Supabase\n")  # Log the uploaded file path
-
-# test_path = r"C:\\Users\\abdul\\Documents\\Uni\\y2\\2019 (SEGP)\\Water Temp Sensors\\ECO\\Ambuclao\\lake\\Ambuclao_lake_2025156002524_filter_wtoff.tif"
-# upload_to_supabase(bucket_name, SUPABASE_URL, SUPABASE_KEY, test_path, "Ambuclao")
     
 # Cleanup old files in local folder and Supabase bucket
 # Local folder version for testing
@@ -1217,83 +699,4 @@ process_all(new_files)
 
 # Phase 6: Log updates
 # log_updates()
-
-# # Phase 7: Reconstruct the filtered CSVs
-# clean_filtered_csvs(filtered_path)
-
-# Delete files older than 1st Feb 2025
-# cutoff_date = datetime(2025, 2, 1)
-# filtered_path_2 = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors/old-test/ECO/"
-# cleanup_old_files_local(filtered_path_2, 32)
-
-def clean_filtered_csvs(filtered_path):
-    for root, _, files in os.walk(filtered_path):
-        for file in files:
-            if file.endswith(".csv"):
-                file_path = os.path.join(root, file)
-                try:
-                    df = pd.read_csv(file_path)
-                    for col in ["LST", "LST_err", "QC", "EmisWB"]:
-                        df.drop(columns=[f"{col}"], inplace=True)
-                    df.dropna(subset=["LST_filter"], inplace=True)
-                    df.to_csv(file_path, index=False)
-                    print(f"Cleaned file: {file_path}")
-                except Exception as e:
-                    print(f"Error processing file {file_path}: {e}")
-                    
-def clean_filtered_tifs(filtered_path):
-    for root, _, files in os.walk(filtered_path):
-        for file in files:
-            if file.endswith(".tif"):
-                file_path = os.path.join(root, file)
-                try:
-                    with rasterio.open(file_path, "r+") as src:
-                        data = src.read(1)  # Read the first band
-                        data[data == src.nodata] = np.nan  # Replace nodata values with NaN
-                        data = np.where(np.isnan(data), src.nodata, data)  # Remove pixels with NaN
-                        src.write(data, 1)  # Write the cleaned data back to the file
-                    print(f"Cleaned file: {file_path}")
-                except Exception as e:
-                    print(f"Error processing file {file_path}: {e}")
-
-# def convert_csv_to_tif():
-    # """
-    # Converts a single CSV file to a GeoTIFF file using a reference raster for geospatial metadata.
-
-    # Args:
-    #     csv_path (str): Path to the CSV file.
-    #     output_tif_path (str): Path to the output GeoTIFF file.
-    #     reference_raster_path (str): Path to a reference raster file for geospatial metadata.
-    # """
-
-    # csv_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECO\Ambuclao\lake\Ambuclao_lake_2025047192336_filter.csv"
-    # output_tif_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECO\Ambuclao\lake\testtest.tif"
-    # reference_raster_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECO\Ambuclao\lake\Ambuclao_lake_2025047192336_filter.tif"
-    # # Load reference raster for metadata
-    # with rasterio.open(reference_raster_path) as ref_raster:
-    #     ref_meta = ref_raster.meta.copy()
-    #     rows, cols = ref_meta['height'], ref_meta['width']
-
-    #     print(f"Reference Metadata: {ref_meta}")
-    # try:
-    #     # Read CSV data
-    #     df = pd.read_csv(csv_path)
-    #     if "x" not in df.columns or "y" not in df.columns:
-    #         print(f"Skipping {csv_path}: Missing 'x' or 'y' columns.")
-    #         return
-
-    #     # Extract raster data from DataFrame
-    #     raster_data = np.full((rows, cols), np.nan, dtype=np.float32)
-    #     raster_data[df["y"], df["x"]] = df["LST_filter"]
-
-    #     # Update metadata for single-band raster
-    #     ref_meta.update(dtype=rasterio.float32, count=1)
-
-    #     # Save to GeoTIFF
-    #     with rasterio.open(output_tif_path, "w", **ref_meta) as dst:
-    #         dst.write(raster_data, 1)
-
-    #     print(f"Converted {csv_path} to {output_tif_path}")
-    # except Exception as e:
-    #     print(f"Error processing {csv_path}: {e}")
 
