@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/static/web_logo.png" type="image/png">
+    <title>{{ feature_id }} Archive</title>
+    
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #121212;
+            color: #fff;
+            text-align: center;
+        }
+        header {
+            background: linear-gradient(135deg, #0b3d91, #48c6ef);
+            padding: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            text-transform: uppercase;
+            position: relative;
+        }
+        .container {
+            width: 90%;
+            margin: auto;
+            padding: 20px;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            padding-top: 10px;
+        }
+        .grid-item {
+            background: #1e1e1e;
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+        .grid-item:hover {
+            transform: scale(1.05);
+        }
+        img {
+            width: 100%;
+            border-radius: 5px;
+            flex-grow: 1;
+            object-fit: cover;
+            min-height: 120px;
+        }
+        .caption {
+            margin-top: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            color: #ddd;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .download-links {
+            margin-top: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .download-link {
+            display: block;
+            font-size: 14px;
+            color: #48c6ef;
+            text-decoration: none;
+            font-weight: 600;
+            padding: 4px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        .download-link:hover {
+            text-decoration: underline;
+            background-color: rgba(72, 198, 239, 0.1);
+        }
+        
+        #back-btn {
+            position: absolute;
+            top: 50%;
+            left: 20px;
+            transform: translateY(-50%);
+            background-color: #007BFF;
+            color: #fff;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+
+        #back-btn:hover {
+            background-color: #0056b3;
+        }
+        
+        .water-mask-warning {
+            margin-top: 8px;
+            padding: 6px;
+            background: rgba(255, 111, 97, 0.1);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+        
+        .water-mask-warning svg {
+            margin-right: 6px;
+            flex-shrink: 0;
+        }
+        
+        .water-mask-warning span {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        @media (max-width: 768px) {
+            .grid-container {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+            
+            header {
+                font-size: 20px;
+                padding: 15px;
+            }
+            
+            #back-btn {
+                padding: 8px 16px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        {{ feature_id }} Archive
+        <button id="back-btn" onclick="window.history.back();">Back</button>
+    </header>
+    
+    <div class="container">
+        <div class="grid-container" id="imageGrid">
+            {% for filename in tif_files %}
+                <div class="grid-item" data-layer="{{ filename | extract_layer }}">
+                    <img src="{{ url_for('serve_tif_as_png', feature_id=feature_id, filename=filename) }}" 
+                         alt="{{ feature_id }} for {{ filename }}"
+                         loading="lazy">
+                    <div class="caption" title="{{ filename }}">{{ filename }}</div>
+                    <div class="download-links">
+                        <a href="{{ url_for('download_tif', feature_id=feature_id, filename=filename) }}" 
+                           class="download-link">Download TIF</a>
+                        <a href="{{ url_for('download_csv', feature_id=feature_id, filename=filename) }}" 
+                           class="download-link">Download CSV</a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <script>
+        function formatDateTime(date) {
+            const year = date.substring(0, 4);
+            const doy = parseInt(date.substring(4, 7), 10);
+            const hours = date.substring(7, 9);
+            const minutes = date.substring(9, 11);
+            const seconds = date.substring(11, 13);
+
+            const dateObj = new Date(year, 0);
+            dateObj.setDate(doy);
+
+            const day = String(dateObj.getDate()).padStart(2, '0');
+            const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+
+            return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+        }
+        
+        function updateCaptions() {
+            document.querySelectorAll('.grid-item .caption').forEach(caption => {
+                const filename = caption.textContent;
+                const parts = filename.split('_');
+                if (parts.length > 2 && parts[2].length >= 13) {
+                    const dateString = parts[2].substring(0, 13);
+                    const formattedDate = formatDateTime(dateString);
+                    caption.textContent = formattedDate;
+                    caption.title = filename;
+                }
+            });
+        }
+        
+        function addWaterMaskSubcaptions() {
+            document.querySelectorAll('.grid-item').forEach(item => {
+                const caption = item.querySelector('.caption');
+                const filename = caption.title;
+                
+                // Remove existing warning if present
+                const existingWarning = item.querySelector('.water-mask-warning');
+                if (existingWarning) {
+                    existingWarning.remove();
+                }
+                
+                // Add warning if '_wtoff' is present
+                if (filename.includes('_wtoff')) {
+                    const warning = document.createElement('div');
+                    warning.className = 'water-mask-warning';
+                    warning.innerHTML = `
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ff6f61">
+                            <path d="M12 2L1 21h22L12 2zm0 4v8m0 4v-2"></path>
+                        </svg>
+                        <span>Water mask was off</span>
+                    `;
+                    item.appendChild(warning);
+                }
+            });
+        }
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            updateCaptions();
+            addWaterMaskSubcaptions();
+            
+            // Lazy load images that may have entered viewport
+            if ('IntersectionObserver' in window) {
+                const lazyImages = document.querySelectorAll('img[loading="lazy"]');
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            const img = entry.target;
+                            img.src = img.getAttribute('src');
+                            observer.unobserve(img);
+                        }
+                    });
+                });
+                
+                lazyImages.forEach(img => observer.observe(img));
+            }
+        });
+    </script>
+</body>
+</html>

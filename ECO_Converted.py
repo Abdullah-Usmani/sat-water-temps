@@ -336,11 +336,7 @@ def process_rasters(aid_number, date, selected_files):
         print(f"Skipping {date} for aid {aid_number}: more than 90% of raw pixels are invalid.")
         return
 
-    if not df["wt"].isin([1]).any():
-        # print("Water not detected.")
-        water_mask_flag = False
-    else:
-        water_mask_flag = True
+    water_mask_flag = df["wt"].isin([1]).any()
 
     # Apply filtering
     for col in ["LST", "LST_err", "QC", "EmisWB", "height"]:
@@ -349,7 +345,7 @@ def process_rasters(aid_number, date, selected_files):
     for col in ["LST_filter", "LST_err_filter", "QC_filter", "EmisWB_filter", "height_filter"]:
         df[f"{col}"] = np.where(df["cloud"] == 1, np.nan, df[col])
 
-    if water_mask_flag:
+    if not water_mask_flag:
         for col in ["LST_filter", "LST_err_filter", "QC_filter", "EmisWB_filter", "height_filter"]:
             df[f"{col}"] = np.where(df["wt"] == 0, np.nan, df[col])
         filter_csv_path = os.path.join(dest_folder_filtered, f"{name}_{location}_{date}_filter_wtoff.csv")
@@ -372,7 +368,7 @@ def process_rasters(aid_number, date, selected_files):
         print(f"Skipping {date} for aid {aid_number}: more than 90% of filtered pixels are invalid.")
         return
 
-     # Convert filtered data back to raster
+    # Convert filtered data back to raster
     def create_raster(data, reference_raster):
         meta = reference_raster.meta.copy()
         meta.update(dtype=rasterio.float32, count=1)
@@ -390,6 +386,7 @@ def process_rasters(aid_number, date, selected_files):
     filter_meta = filtered_rasters["LST"][1].copy()
     filter_meta.update(dtype=rasterio.float32, count=len(filtered_rasters))  # Correct band count
 
+    # Save filtered raster
     with rasterio.open(filter_tif_path, "w", **filter_meta) as dst:
         for idx, (key, (data, _)) in enumerate(filtered_rasters.items(), start=1):
             dst.write(data, idx)  # Ensure correct band range
@@ -439,15 +436,7 @@ def process_all(all_new_files):
     
     print(f"Processing {len(updated_aids)} updated folders...")
 
-    file_path = f"updates_{timestamp}.txt"  # Each run creates a new file
-    full_path = os.path.join(log_path, file_path)
-
-    # Ensure the log directory exists
-    os.makedirs(log_path, exist_ok=True)
-
-    # Open the file in append mode to ensure all writes are preserved
-    with open(full_path, 'a', encoding='utf-8') as file:
-        file.write(f"Updated AIDs {updated_aids}\n")  # Log the updated AIDs
+    # updated_aids = list(updated_aids)
 
     # Process each updated folder and date
     for aid_number in updated_aids:
@@ -461,6 +450,7 @@ def process_all(all_new_files):
             print("No new files to process.")
             continue
         specific_date_files = []
+
         for date in new_dates_get:
             for file in aid_folder_files:
                 if date == extract_metadata(file)[1]:
@@ -724,4 +714,3 @@ process_all(new_files)
 
 # Phase 6: Log updates
 # log_updates()
-
