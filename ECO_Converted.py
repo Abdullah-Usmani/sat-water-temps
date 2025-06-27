@@ -61,14 +61,13 @@ print("Setting Dates")
 today_date = datetime.now()
 today_date_str = today_date.strftime("%m-%d-%Y")
 ed = today_date_str
-# ed = "06-24-2025"
-
+ed = "05-31-2025"
 
 # Get Yesterday Date as Start Date
 yesterday_date = today_date - timedelta(days=1)
 yesterday_date_str = yesterday_date.strftime("%m-%d-%Y")
 sd = yesterday_date_str
-# sd = "06-19-2025"
+sd = "05-26-2025"
 
 # KEY RESULTS TO STORE/LOG
 updated_aids = set()
@@ -333,8 +332,8 @@ def process_rasters(aid_number, date, selected_files):
     total_pixels = valid_pixels + invalid_pixels
     print(f"Total raw pixels for {date} (aid {aid_number}): {total_pixels}")
 
-    if total_pixels > 0 and (invalid_pixels / (total_pixels) > 0.8):
-        print(f"Skipping {date} for aid {aid_number}: more than 80% of raw pixels are invalid.")
+    if total_pixels > 0 and (invalid_pixels / (total_pixels) > 0.9):
+        print(f"Skipping {date} for aid {aid_number}: more than 90% of raw pixels are invalid.")
         return
 
     if not df["wt"].isin([1]).any():
@@ -369,8 +368,8 @@ def process_rasters(aid_number, date, selected_files):
     total_pixels = valid_pixels + invalid_pixels
     print(f"Total filtered pixels for {date} (aid {aid_number}): {total_pixels}")
 
-    if total_pixels > 0 and (invalid_pixels / (total_pixels) > 0.8):
-        print(f"Skipping {date} for aid {aid_number}: more than 80% of filtered pixels are invalid.")
+    if total_pixels > 0 and (invalid_pixels / (total_pixels) > 0.9):
+        print(f"Skipping {date} for aid {aid_number}: more than 90% of filtered pixels are invalid.")
         return
 
      # Convert filtered data back to raster
@@ -478,10 +477,31 @@ def upload_to_supabase(bucket_name, supabase_url, supabase_key, file_path, name,
     os.makedirs(log_path, exist_ok=True)
     
     supabase: Client = create_client(supabase_url, supabase_key)
-    supabase_path = f"ECO/{name}/{location}/{os.path.basename(file_path)}"
+    supabase_dir = f"ECO/{name}/{location}"
+    supabase_path = f"{supabase_dir}/{os.path.basename(file_path)}"
+
+    # Ensure subdirectories exist in Supabase (Supabase creates folders implicitly on upload, but we can ensure by uploading a .keep file if needed)
+    try:
+        # Check if ECO/{name} directory exists
+        existing_dirs = supabase.storage.from_(bucket_name).list("ECO/")
+        if not any(d["name"] == name and d.get("metadata", {}).get("mimetype") == "application/x-directory" for d in existing_dirs):
+            # Create a .keep file to ensure the {name} folder exists
+            keep_path = f"ECO/{name}/.keep"
+            supabase.storage.from_(bucket_name).upload(keep_path, b"")
+
+        # Now check if ECO/{name}/{location} directory exists
+        existing_subdirs = supabase.storage.from_(bucket_name).list(f"ECO/{name}/")
+        if not any(d["name"] == location and d.get("metadata", {}).get("mimetype") == "application/x-directory" for d in existing_subdirs):
+            # Create a .keep file to ensure the {location} folder exists
+            keep_path = f"ECO/{name}/{location}/.keep"
+            supabase.storage.from_(bucket_name).upload(keep_path, b"")
+    except Exception as e:
+        # If listing fails, still try to upload the file (Supabase will create folders as needed)
+        print(f"Error ensuring folder in Supabase: {e}")
+
     # Check if file already exists in Supabase
     try:
-        existing_files = supabase.storage.from_(bucket_name).list(f"ECO/{name}/{location}")
+        existing_files = supabase.storage.from_(bucket_name).list(supabase_dir)
         if any(f["name"] == os.path.basename(file_path) for f in existing_files):
             print(f"Skipped upload: {file_path} already exists in Supabase bucket {bucket_name}")
             with open(full_path, 'a', encoding='utf-8') as log_file:
@@ -524,7 +544,7 @@ def cleanup_old_files_local(folder_path, specified_doy):
                     # Calculate current DOY from the timestamp variable
                     current_date = datetime.strptime(timestamp[:8], "%Y%m%d")
                     current_doy = current_date.timetuple().tm_yday
-                    if doy < (current_doy - 30):
+                    if doy < (current_doy - specified_doy):
                         os.remove(file_path)
                         print(f"Deleted {file_path} (DOY {doy})")
                         with open(full_path, 'a', encoding='utf-8') as log_file:
@@ -569,7 +589,7 @@ def cleanup_old_files_supabase(bucket_name, supabase_url, supabase_key, specifie
                     # Calculate current DOY from the timestamp variable
                     current_date = datetime.strptime(timestamp[:8], "%Y%m%d")
                     current_doy = current_date.timetuple().tm_yday
-                    if doy < (current_doy - 30):
+                    if doy < (current_doy - specified_doy):
                         file_path = f"ECO/{folder['name']}/lake/{file['name']}"
                         # print(f"Found old file: {file_path} (DOY {doy})")
                         supabase.storage.from_(bucket_name).remove([file_path])
@@ -663,7 +683,12 @@ def log_updates():
 # Phase 1: Submit task in one go
 # task_request = build_task_request(product, layers, roi_json, sd, ed)
 # task_id = submit_task(headers, task_request)
-# print(f"Task ID: {task_id}")
+task_id = "810e3831-2d8d-43ba-9f91-723fe8f5daad" # 05-01-2025 -> 05-06-2025
+# task_id = "ecb34ae7-3064-463f-b00f-86d694053421" # 05-07-2025 -> 05-12-2025
+# task_id = "4a9a66a7-f2a0-4600-ab24-7b312ca8c14c" # 05-13-2025 -> 05-18-2025
+# task_id = "27b2bd91-53c5-4123-96fb-5b0783a3cb63" # 05-19-2025 -> 05-25-2025
+# task_id = "fc904a87-347d-4229-b522-6823f214a081" # 05-26-2025 -> 05-31-2025
+print(f"Task ID: {task_id}")
 
 # Phase 2: Create Directories and Mapping
 aid_folder_mapping = {}  # Initialize mapping outside the loop
@@ -681,21 +706,21 @@ for idx, row in roi.iterrows():
     aid_folder_mapping[int(aid_number)] = (row['name'], row['location'])  # Map aid number to folder
 
 # Phase 3: Check the status of the single task
-# print("All tasks submitted!")
-# print("Checking task statuses...")
-# status = check_task_status(task_id, headers)
-# if status:
-#     print(f"Downloading results for Task ID: {task_id}...")
-#     download_results(task_id, headers)  # Pass the roi DataFrame for dynamic mapping    
-# print("All tasks completed, results downloaded!")
+print("All tasks submitted!")
+print("Checking task statuses...")
+status = check_task_status(task_id, headers)
+if status:
+    print(f"Downloading results for Task ID: {task_id}...")
+    download_results(task_id, headers)  # Pass the roi DataFrame for dynamic mapping    
+print("All tasks completed, results downloaded!")
 
 # # Phase 4: Process the raster files
 process_all(new_files)
 
-# Phase 5: Cleanup old files
-# test_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\misc\2606minus30\ECO\\"
-# cleanup_old_files_local(test_path, 32)
-# cleanup_old_files_supabase(bucket_name, SUPABASE_URL, SUPABASE_KEY, 32, datetime(2025, 2, 1))
+# # Phase 5: Cleanup old files
+# test_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\New Folder\\ECO\\"
+# cleanup_old_files_local(test_path, 90)
+# cleanup_old_files_supabase(bucket_name, SUPABASE_URL, SUPABASE_KEY, 90, datetime(2025, 2, 1))
 
 # Phase 6: Log updates
 # log_updates()

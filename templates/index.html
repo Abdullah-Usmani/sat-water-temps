@@ -168,7 +168,7 @@
                 
 
             // Add the GeoJSON data with local data
-            fetch("/static/polygons.geojson")
+            fetch("/static/polygons_new.geojson")
                 .then(response => response.json())
                 .then(data => {
                     L.geoJSON(data, {

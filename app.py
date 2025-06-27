@@ -33,7 +33,7 @@ app.jinja_env.filters['extract_layer'] = extract_layer
 
 @app.route('/feature/<feature_id>')
 def feature_page(feature_id):
-    geojson_path = os.path.join(root_folder, 'sat-water-temps', 'static', 'polygons.geojson')  # Adjust path as needed
+    geojson_path = os.path.join(root_folder, 'sat-water-temps', 'static', 'polygons_new.geojson')  # Adjust path as needed
 
     # Load GeoJSON and find the lake feature
     with open(geojson_path, 'r') as f:
