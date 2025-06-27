@@ -33,7 +33,7 @@ app.jinja_env.filters['extract_layer'] = extract_layer
 
 @app.route('/feature/<feature_id>')
 def feature_page(feature_id):
-    geojson_path = os.path.join(root_folder, 'sat-water-temps', 'static', 'polygons.geojson')  # Adjust path as needed
+    geojson_path = os.path.join(root_folder, 'sat-water-temps', 'static', 'polygons_new.geojson')  # Adjust path as needed
 
     # Load GeoJSON and find the lake feature
     with open(geojson_path, 'r') as f:
@@ -234,7 +234,7 @@ def normalize(data):
     if np.isnan(min_val) or np.isnan(max_val) or max_val == min_val:
         return np.zeros_like(data, dtype=np.uint8), np.zeros_like(data, dtype=np.uint8)  # Black + Transparent
 
-    norm_data = ((data - min_val) / (max_val - min_val) * 255).astype(np.uint8)
+    norm_data = np.nan_to_num((data - min_val) / (max_val - min_val) * 255, nan=0).astype(np.uint8)
 
     # Create an alpha mask: Transparent for NaN/missing values, opaque for valid data
     alpha_mask = np.where(np.isnan(data) | (data < -1000), 0, 255).astype(np.uint8)
