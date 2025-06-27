@@ -671,13 +671,8 @@ def log_updates():
     print(f"Updates saved to {full_path}.")
 
 # Phase 1: Submit task in one go
-# task_request = build_task_request(product, layers, roi_json, sd, ed)
-# task_id = submit_task(headers, task_request)
-task_id = "810e3831-2d8d-43ba-9f91-723fe8f5daad" # 05-01-2025 -> 05-06-2025
-# task_id = "ecb34ae7-3064-463f-b00f-86d694053421" # 05-07-2025 -> 05-12-2025
-# task_id = "4a9a66a7-f2a0-4600-ab24-7b312ca8c14c" # 05-13-2025 -> 05-18-2025
-# task_id = "27b2bd91-53c5-4123-96fb-5b0783a3cb63" # 05-19-2025 -> 05-25-2025
-# task_id = "fc904a87-347d-4229-b522-6823f214a081" # 05-26-2025 -> 05-31-2025
+task_request = build_task_request(product, layers, roi_json, sd, ed)
+task_id = submit_task(headers, task_request)
 print(f"Task ID: {task_id}")
 
 # Phase 2: Create Directories and Mapping
@@ -691,7 +686,6 @@ for idx, row in roi.iterrows():
     print(f"Output folder created: {output_folder}")
 
     # Map aid numbers to output folders
-#    aid_number = f'aid{str(idx + 1).zfill(4)}'  # Construct aid number
     aid_number = int(idx + 1)  # Construct aid number
     aid_folder_mapping[int(aid_number)] = (row['name'], row['location'])  # Map aid number to folder
 
@@ -708,9 +702,8 @@ print("All tasks completed, results downloaded!")
 process_all(new_files)
 
 # # Phase 5: Cleanup old files
-# test_path = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\New Folder\\ECO\\"
-# cleanup_old_files_local(test_path, 90)
-# cleanup_old_files_supabase(bucket_name, SUPABASE_URL, SUPABASE_KEY, 90, datetime(2025, 2, 1))
+cleanup_old_files_local(filtered_path, 90)
+cleanup_old_files_supabase(bucket_name, SUPABASE_URL, SUPABASE_KEY, 90, datetime(2025, 2, 1))
 
 # Phase 6: Log updates
-# log_updates()
+log_updates()
