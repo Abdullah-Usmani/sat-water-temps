@@ -102,16 +102,17 @@ def get_latest_temperature(feature_id):
     csv_path = csv_files[0]
     
     df = pd.read_csv(csv_path)
-    if not {'x', 'y', 'LST_filter'}.issubset(df.columns):
+    lst_col = next((col for col in df.columns if 'LST' in col), None)
+    if not {'x', 'y'}.issubset(df.columns) or lst_col is None:
         return jsonify({"error": "CSV file missing required columns"}), 400
 
-    temp_data = df[['x', 'y', 'LST_filter']].dropna()
-    
+    temp_data = df[['x', 'y', lst_col]].dropna()
+
     if temp_data.empty:
         return jsonify({"error": "No data found"}), 404
-    
-    min_max_values = [temp_data['LST_filter'].min(), temp_data['LST_filter'].max()]
-    
+
+    min_max_values = [temp_data[lst_col].min(), temp_data[lst_col].max()]
+
     return jsonify({
         "data": temp_data.to_dict(orient='records'),
         "min_max": min_max_values
@@ -151,15 +152,16 @@ def get_temperature_by_doy(feature_id, doy):
         if metadata[1] == doy:
             csv_path = os.path.join(data_folder, csv_file)
             df = pd.read_csv(csv_path)
-            if not {'x', 'y', 'LST_filter'}.issubset(df.columns):
+            lst_col = next((col for col in df.columns if 'LST' in col), None)
+            if not {'x', 'y'}.issubset(df.columns) or lst_col is None:
                 return jsonify({"error": "CSV file missing required columns"}), 400
 
-            temp_data = df[['x', 'y', 'LST_filter']].dropna()
+            temp_data = df[['x', 'y', lst_col]].dropna()
             
             if temp_data.empty:
                 return jsonify({"error": "No data found"}), 404
             
-            min_max_values = [temp_data['LST_filter'].min(), temp_data['LST_filter'].max()]
+            min_max_values = [temp_data[lst_col].min(), temp_data[lst_col].max()]
             
             return jsonify({
                 "data": temp_data.to_dict(orient='records'),
@@ -254,13 +256,13 @@ def tif_to_png(tif_path, color_scale="relative"):
     with rasterio.open(tif_path) as dataset:
         num_bands = dataset.count
 
-        if num_bands < 5:
-            # Return a placeholder image indicating the image is missing
-            img = Image.new('RGBA', (256, 256), (255, 0, 0, 0))  # Red transparent image
-            img_bytes = io.BytesIO()
-            img.save(img_bytes, format="PNG")
-            img_bytes.seek(0)
-            return img_bytes
+        # if num_bands < 5:
+        #     # Return a placeholder image indicating the image is missing
+        #     img = Image.new('RGBA', (256, 256), (255, 0, 0, 0))  # Red transparent image
+        #     img_bytes = io.BytesIO()
+        #     img.save(img_bytes, format="PNG")
+        #     img_bytes.seek(0)
+        #     return img_bytes
 
         if color_scale == "fixed":
             # fixedscale output

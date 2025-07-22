@@ -17,8 +17,11 @@ from pathlib import Path
 # === Directory & Environment Setup ===
 
 # Define directory paths
-raw_path = Path(r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw")
-filtered_path = Path(r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECO")
+eco_raw_path = Path(r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw")
+eco_filtered_path = Path(r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECO")
+myd_raw_path = Path(r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\MYD11A1raw")
+myd_filtered_path = Path(r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\MYD11A1")
+raw_download_path = Path(r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\downloads")
 roi_path = Path(r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\misc\polygon\new_polygons.shp")
 log_path = Path(r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\logs")
 
@@ -42,6 +45,7 @@ bucket_name = "multitifs"
 supabase_folder = f"{SUPABASE_URL}/storage/v1/object/public/{bucket_name}"
 
 # === Global State for Logging/Tracking ===
+# Load updated_aids and new_files from text.txt
 updated_aids = set()
 new_files = []
 multi_aids = set()
@@ -78,11 +82,24 @@ product = "ECO_L2T_LSTE.002"
 headers = { 'Authorization': f'Bearer {token}' }
 layers = ["LST", "LST_err", "QC", "water", "cloud", "EmisWB", "height"]
 
+# Landsat-specific settings
+product_MODIS = "MYD11A1.061"  # MODIS/Aqua Land Surface Temperature/Emissivity Daily L3 Global 1km
+# Landsat Bands for LST Calculation
+layers_MODIS = [
+  "LST_Day_1km",      # Daytime Land Surface Temperature
+    "LST_Night_1km",    # Nighttime Land Surface Temperature
+    "QC_Day",           # Quality Control for Daytime LST
+    "QC_Night",         # Quality Control for Nighttime LST
+    "Emis_31",          # Emissivity Band 31
+    "Emis_32"           # Emissivity Band 32
+]
+
+
 # Define the date range for the task
 end_date = datetime.now().strftime("%m-%d-%Y")
-end_date = "06-30-2025"
+end_date = "07-05-2025"
 start_date = (datetime.now() - timedelta(days=1)).strftime("%m-%d-%Y")
-start_date = "06-25-2025"
+start_date = "06-30-2025"
 
 # Load the area of interest (ROI)
 roi = gpd.read_file(roi_path)
@@ -92,7 +109,7 @@ roi_json = roi.__geo_interface__  # Convert ROI to GeoJSON
 def build_task_request(product, layers, roi_json, start_date, end_date):
     task = {
         "task_type": "area",
-        "task_name": "ECOStress_Request",
+        "task_name": product,
         "params": {
             "dates": [{"startDate": start_date, "endDate": end_date}],
             "layers": [{"product": product, "layer": layer} for layer in layers],
@@ -143,7 +160,7 @@ def check_task_status(task_id, headers):
 
 ## === 2. CREATE AID FOLDER MAPPING FUNCTION(S) ===
 
-def create_aid_folder_mapping(roi, raw_path):
+def create_aid_folder_mapping(roi, eco_raw_path):
     """
     Creates a mapping from aid numbers to (name, location) tuples and ensures output folders exist.
     Returns the mapping as a dictionary.
@@ -151,7 +168,7 @@ def create_aid_folder_mapping(roi, raw_path):
     mapping = {}
     for idx, row in roi.iterrows():
         print(f"Processing ROI {idx + 1}/{len(roi)}")
-        output_folder = os.path.join(raw_path, row['name'], row['location'])
+        output_folder = os.path.join(eco_raw_path, row['name'], row['location'])
         os.makedirs(output_folder, exist_ok=True)
         print(f"Output folder created: {output_folder}")
         aid_number = int(idx + 1)
@@ -180,7 +197,7 @@ def download_results(task_id, headers):
             if name is None or location is None:
                 print(f"No mapping found for AID: {aid_number}, skipping...")
                 continue
-            output_folder = os.path.join(raw_path, name, location)
+            output_folder = os.path.join(raw_download_path, name, location)
             
             if output_folder is not None:
                 # Ensure output folder exists and strip preceding folder in file_name if present
@@ -197,13 +214,13 @@ def download_results(task_id, headers):
                     for chunk in download_response.iter_content(chunk_size=8192):
                         f.write(chunk)
                 new_files.append(local_filename)  # Track newly downloaded files
-                print(f"Downloaded: {local_filename}")
+                print(f","r"{local_filename}")
 
         else:
             # Handle general files without aid numbers (e.g., XML, CSV, JSON)
             base_name, ext = os.path.splitext(file_name)
             new_file_name = f"{base_name}_{timestamp}{ext}"  # Append timestamp before extension
-            local_filename = os.path.join(raw_path, new_file_name)  # Save directly to the base folder
+            local_filename = os.path.join(raw_download_path, new_file_name)  # Save directly to the base folder
 
             # print(f"Downloading to base folder: {local_filename}")
 
@@ -215,7 +232,7 @@ def download_results(task_id, headers):
                     f.write(chunk)
 
             new_files.append(local_filename)  # Track newly downloaded files
-            print(f"Downloaded: {local_filename}")
+            print(f","r"{local_filename}")
 
         file_path = f"updates_{timestamp}.txt"  # Each run creates a new file
         full_path = os.path.join(log_path, file_path)
@@ -225,7 +242,7 @@ def download_results(task_id, headers):
 
         # Open the file in append mode to ensure all writes are preserved
         with open(full_path, 'a', encoding='utf-8') as file:
-            file.write(f"Downloaded: {local_filename}\n")  # Log the file path
+            file.write(f","r"{local_filename}\n")  # Log the file path
 
 ### === 4. PROCESSING FUNCTIONS ===
 
@@ -239,9 +256,10 @@ def extract_metadata(filename):
 
     return aid_number, date
 
-# Function to process a single date
-def process_rasters(aid_number, date, selected_files):
-    print(f"Processing date: {date} for aid: {aid_number}")
+
+# Function to process a single date for either ECO or MODIS product
+def process_rasters(aid_number, date, selected_files, product_type="ECO"):
+    print(f"Processing date: {date} for aid: {aid_number} (Product: {product_type})")
 
     # Filter files for this aid and date
     relevant_files = [
@@ -252,138 +270,254 @@ def process_rasters(aid_number, date, selected_files):
         print(f"No files found for date: {date}")
         return
 
-    # Helper to open raster by layer name
-    def open_raster(layer):
-        for f in relevant_files:
-            if layer in f:
-                return rasterio.open(f)
-        return None
-
-    # Read all required layers
-    layer_names = ["LST", "LST_err", "QC", "water", "cloud", "EmisWB", "height"]
-    rasters = {name: open_raster(name) for name in layer_names}
-    if any(r is None for r in rasters.values()):
-        print(f"Skipping {date} due to missing layers.")
-        return
-
-    # Read arrays
-    arrays = {k: v.read(1) for k, v in rasters.items()}
-
     # Get folder info
     name, location = aid_folder_mapping.get(aid_number, (None, None))
     if not name or not location:
         print(f"No mapping found for AID: {aid_number}, skipping...")
         return
 
-    # Prepare folders and paths
-    dest_raw = os.path.join(raw_path, name, location)
-    dest_filtered = os.path.join(filtered_path, name, location)
-    os.makedirs(dest_raw, exist_ok=True)
-    os.makedirs(dest_filtered, exist_ok=True)
-    raw_tif_path = os.path.join(dest_raw, f"{name}_{location}_{date}_raw.tif")
+    def open_raster(layer):
+        for f in relevant_files:
+            if layer in f:
+                try:
+                    return rasterio.open(f)
+                except rasterio.errors.RasterioIOError as e:
+                    print(f"Error opening raster '{f}': {e}")
+                    if "not recognized as being in a supported file format" in str(e):
+                        print(f"Skipping file due to unsupported format: {f}")
+                    return None
+        return None
 
-    # Save raw raster (all bands)
-    meta = rasters["LST"].meta.copy()
-    meta.update(dtype=rasterio.float32, count=len(arrays))
-    with rasterio.open(raw_tif_path, "w", **meta) as dst:
-        for idx, arr in enumerate(arrays.values(), 1):
-            dst.write(arr, idx)
-    print(f"Saved raw raster: {raw_tif_path}")
+    if product_type == "ECO":
+        dest_raw = os.path.join(eco_raw_path, name, location)
+        dest_filtered = os.path.join(eco_filtered_path, name, location)
+        os.makedirs(dest_raw, exist_ok=True)
+        os.makedirs(dest_filtered, exist_ok=True)
 
-    # Prepare DataFrame
-    rows, cols = arrays["LST"].shape
-    x, y = np.meshgrid(np.arange(cols), np.arange(rows))
-    df = pd.DataFrame({
-        "x": x.flatten(),
-        "y": y.flatten(),
-        **{k: arr.flatten() for k, arr in arrays.items()}
-    })
+        # Read all required layers
+        layer_names = ["LST", "LST_err", "QC", "water", "cloud", "EmisWB", "height"]
+        rasters = {name: open_raster(name) for name in layer_names}
+        if any(r is None for r in rasters.values()):
+            print(f"Skipping {date} due to missing or unsupported layers.")
+            return
 
-    # Save raw CSV
-    raw_csv_path = os.path.join(dest_raw, f"{name}_{location}_{date}_raw.csv")
-    df.to_csv(raw_csv_path, index=False)
-    print(f"Saved raw CSV: {raw_csv_path}")
+        arrays = {k: v.read(1) for k, v in rasters.items()}
+        raw_tif_path = os.path.join(dest_raw, f"{name}_{location}_{date}_raw.tif")
+        meta = rasters["LST"].meta.copy()
+        meta.update(dtype=rasterio.float32, count=len(arrays))
+        with rasterio.open(raw_tif_path, "w", **meta) as dst:
+            for idx, arr in enumerate(arrays.values(), 1):
+                dst.write(arr, idx)
+        print(f"Saved raw raster: {raw_tif_path}")
 
-    # Pixel stats
-    valid = df["LST"].notna().sum()
-    invalid = df["LST"].isna().sum()
-    total = valid + invalid
-    print(f"Valid raw pixels: {valid}, Invalid: {invalid}, Total: {total}")
-    if total > 0 and invalid / total > 0.9:
-        print(f"Skipping {date} for aid {aid_number}: >90% invalid raw pixels.")
-        return
+        rows, cols = arrays["LST"].shape
+        x, y = np.meshgrid(np.arange(cols), np.arange(rows))
+        df = pd.DataFrame({
+            "x": x.flatten(),
+            "y": y.flatten(),
+            **{k: arr.flatten() for k, arr in arrays.items()}
+        })
 
-    # Filtering
-    INVALID_QC = {15, 2501, 3525, 65535}
-    water_mask = df["water"].isin([1]).any()
-    for col in ["LST", "LST_err", "QC", "EmisWB", "height"]:
-        df[f"{col}_f"] = np.where(df["QC"].isin(INVALID_QC), np.nan, df[col])
-    for col in ["LST_f", "LST_err_f", "QC_f", "EmisWB_f", "height_f"]:
-        df[col] = np.where(df["cloud"] == 1, np.nan, df[col])
-    if not water_mask:
+        raw_csv_path = os.path.join(dest_raw, f"{name}_{location}_{date}_raw.csv")
+        df.to_csv(raw_csv_path, index=False)
+        print(f"Saved raw CSV: {raw_csv_path}")
+
+        valid = df["LST"].notna().sum()
+        invalid = df["LST"].isna().sum()
+        total = valid + invalid
+        print(f"Valid raw pixels: {valid}, Invalid: {invalid}, Total: {total}")
+        if total > 0 and invalid / total > 0.9:
+            print(f"Skipping {date} for aid {aid_number}: >90% invalid raw pixels.")
+            return
+
+        INVALID_QC = {15, 2501, 3525, 65535}
+        water_mask = df["water"].isin([1]).any()
+        for col in ["LST", "LST_err", "QC", "EmisWB", "height"]:
+            df[f"{col}_f"] = np.where(df["QC"].isin(INVALID_QC), np.nan, df[col])
         for col in ["LST_f", "LST_err_f", "QC_f", "EmisWB_f", "height_f"]:
-            df[col] = np.where(df["water"] == 0, np.nan, df[col])
-        filter_csv_path = os.path.join(dest_filtered, f"{name}_{location}_{date}_filter_wtoff.csv")
-        filter_tif_path = os.path.join(dest_filtered, f"{name}_{location}_{date}_filter_wtoff.tif")
-    else:
-        filter_csv_path = os.path.join(dest_filtered, f"{name}_{location}_{date}_filter.csv")
-        filter_tif_path = os.path.join(dest_filtered, f"{name}_{location}_{date}_filter.tif")
+            df[col] = np.where(df["cloud"] == 1, np.nan, df[col])
+        if not water_mask:
+            for col in ["LST_f", "LST_err_f", "QC_f", "EmisWB_f", "height_f"]:
+                df[col] = np.where(df["water"] == 0, np.nan, df[col])
+            filter_csv_path = os.path.join(dest_filtered, f"{name}_{location}_{date}_filter_wtoff.csv")
+            filter_tif_path = os.path.join(dest_filtered, f"{name}_{location}_{date}_filter_wtoff.tif")
+        else:
+            filter_csv_path = os.path.join(dest_filtered, f"{name}_{location}_{date}_filter.csv")
+            filter_tif_path = os.path.join(dest_filtered, f"{name}_{location}_{date}_filter.tif")
 
-    # Drop unfiltered columns
-    df.drop(columns=["LST", "LST_err", "QC", "EmisWB", "height"], inplace=True)
+        df.drop(columns=["LST", "LST_err", "QC", "EmisWB", "height"], inplace=True)
 
-    # Filtered pixel stats
-    valid = df["LST_f"].notna().sum()
-    invalid = df["LST_f"].isna().sum()
-    total = valid + invalid
-    print(f"Valid filtered pixels: {valid}, Invalid: {invalid}, Total: {total}")
-    if total > 0 and invalid / total > 0.9:
-        print(f"Skipping {date} for aid {aid_number}: >90% invalid filtered pixels.")
-        return
+        valid = df["LST_f"].notna().sum()
+        invalid = df["LST_f"].isna().sum()
+        total = valid + invalid
+        print(f"Valid filtered pixels: {valid}, Invalid: {invalid}, Total: {total}")
+        if total > 0 and invalid / total > 0.9:
+            print(f"Skipping {date} for aid {aid_number}: >90% invalid filtered pixels.")
+            return
 
-    # Save filtered raster
-    def arr_to_raster(data, ref_raster):
-        meta = ref_raster.meta.copy()
-        meta.update(dtype=rasterio.float32, count=1)
-        return data.reshape(rows, cols).astype(np.float32), meta
+        def arr_to_raster(data, ref_raster):
+            meta = ref_raster.meta.copy()
+            meta.update(dtype=rasterio.float32, count=1)
+            return data.reshape(rows, cols).astype(np.float32), meta
 
-    filtered_layers = ["LST_f", "LST_err_f", "QC_f", "EmisWB_f", "height_f"]
-    filtered_rasters = {k: arr_to_raster(df[k].values, rasters["LST"]) for k in filtered_layers}
-    filter_meta = filtered_rasters["LST_f"][1].copy()
-    filter_meta.update(count=len(filtered_rasters))
-    with rasterio.open(filter_tif_path, "w", **filter_meta) as dst:
-        for idx, (k, (data, _)) in enumerate(filtered_rasters.items(), 1):
-            dst.write(data, idx)
-    print(f"Saved filtered raster: {filter_tif_path}")
+        filtered_layers = ["LST_f", "LST_err_f", "QC_f", "EmisWB_f", "height_f"]
+        filtered_rasters = {k: arr_to_raster(df[k].values, rasters["LST"]) for k in filtered_layers}
+        filter_meta = filtered_rasters["LST_f"][1].copy()
+        filter_meta.update(count=len(filtered_rasters))
+        with rasterio.open(filter_tif_path, "w", **filter_meta) as dst:
+            for idx, (k, (data, _)) in enumerate(filtered_rasters.items(), 1):
+                dst.write(data, idx)
+        print(f"Saved filtered raster: {filter_tif_path}")
 
-    # Save metadata
-    meta_path = os.path.join(dest_filtered, f"{name}_{location}_metadata.txt")
-    with open(meta_path, 'w') as f:
-        f.write(str(filter_meta))
-    print(f"Saved raster metadata: {meta_path}")
+        meta_path = os.path.join(dest_filtered, f"{name}_{location}_metadata.txt")
+        with open(meta_path, 'w') as f:
+            f.write(str(filter_meta))
+        print(f"Saved raster metadata: {meta_path}")
 
-    # Save filtered CSV (drop NaN rows)
-    df.dropna(subset=["LST_f"], inplace=True)
-    df.to_csv(filter_csv_path, index=False)
-    print(f"Saved filtered CSV: {filter_csv_path}")
+        df.dropna(subset=["LST_f"], inplace=True)
+        df.to_csv(filter_csv_path, index=False)
+        print(f"Saved filtered CSV: {filter_csv_path}")
 
-    # Track for logging/upload
-    multi_aids.add(aid_number)
-    multi_files.extend([filter_tif_path, filter_csv_path])
+        multi_aids.add(aid_number)
+        multi_files.extend([filter_tif_path, filter_csv_path])
 
-    # Upload to Supabase
-    upload_to_supabase(bucket_name, SUPABASE_URL, SUPABASE_KEY, filter_tif_path, name, location)
-    upload_to_supabase(bucket_name, SUPABASE_URL, SUPABASE_KEY, filter_csv_path, name, location)
+        upload_to_supabase(bucket_name, SUPABASE_URL, SUPABASE_KEY, filter_tif_path, name, location)
+        upload_to_supabase(bucket_name, SUPABASE_URL, SUPABASE_KEY, filter_csv_path, name, location)
 
-    # Log
-    log_file = os.path.join(log_path, f"updates_{timestamp}.txt")
-    os.makedirs(log_path, exist_ok=True)
-    with open(log_file, 'a', encoding='utf-8') as file:
-        file.write(f"Filtered CSV {filter_csv_path}\n")
-        file.write(f"Filtered TIF {filter_tif_path}\n")
-        file.write(f"Filtered metadata {meta_path}\n")
+        log_file = os.path.join(log_path, f"updates_{timestamp}.txt")
+        os.makedirs(log_path, exist_ok=True)
+        with open(log_file, 'a', encoding='utf-8') as file:
+            file.write(f"Filtered CSV {filter_csv_path}\n")
+            file.write(f"Filtered TIF {filter_tif_path}\n")
+            file.write(f"Filtered metadata {meta_path}\n")
 
-    print(f"Finished processing {date}")
+        print(f"Finished processing {date}")
+
+    elif product_type == "MODIS":
+        dest_raw = os.path.join(myd_raw_path, name, location)
+        dest_filtered = os.path.join(myd_filtered_path, name, location)
+        os.makedirs(dest_raw, exist_ok=True)
+        os.makedirs(dest_filtered, exist_ok=True)
+
+        # Open MODIS rasters by layer name (similar to ECO)
+        layer_names = [
+            "LST_Day_1km", "LST_Night_1km",
+            "QC_Day", "QC_Night",
+            "Emis_31", "Emis_32"
+        ]
+        rasters = {name: open_raster(name) for name in layer_names}
+        if rasters["LST_Day_1km"] is None or rasters["QC_Day"] is None:
+            print(f"Skipping {date} due to missing or unsupported daytime layers.")
+            return
+
+        # Convert MODIS LST from Kelvin to Celsius (scale factor 0.02) // Not doing celsius conversion right now
+        def process_lst_band(lst_band, qc_band):
+            if lst_band is None:
+                print("Error: LST band is None!")
+                return None
+            lst_data = lst_band.read(1).astype(float)*(0.02)
+            qc_data = qc_band.read(1) if qc_band else None
+            if qc_data is not None:
+                lst_data[(qc_data & 0x03) != 0] = np.nan  # Mask non-good quality pixels
+                return lst_data
+
+        lst_day_c = process_lst_band(rasters["LST_Day_1km"], rasters["QC_Day"])
+        lst_night_c = process_lst_band(rasters["LST_Night_1km"], rasters["QC_Night"])
+
+        # Save raw raster
+        raw_tif_path = os.path.join(dest_raw, f"{name}_{location}_{date}_raw.tif")
+        raw_meta = rasters["LST_Day_1km"].meta.copy()
+        raw_meta.update(dtype=rasterio.float32, count=len(layer_names))
+        with rasterio.open(raw_tif_path, "w", **raw_meta) as dst:
+            for idx, layer in enumerate(layer_names, 1):
+                if rasters[layer] is not None:
+                    dst.write(rasters[layer].read(1), idx)
+        print(f"Saved raw raster: {raw_tif_path}")
+
+        # Save raw CSV
+        rows, cols = rasters["LST_Day_1km"].read(1).shape
+        x, y = np.meshgrid(np.arange(cols), np.arange(rows))
+        df = pd.DataFrame({
+            "x": x.flatten(),
+            "y": y.flatten(),
+            "LST_Day_1km": rasters["LST_Day_1km"].read(1).flatten() if rasters["LST_Day_1km"] is not None else np.nan,
+            "LST_Night_1km": rasters["LST_Night_1km"].read(1).flatten() if rasters["LST_Night_1km"] is not None else np.nan,
+            "QC_Day": rasters["QC_Day"].read(1).flatten() if rasters["QC_Day"] is not None else np.nan,
+            "QC_Night": rasters["QC_Night"].read(1).flatten() if rasters["QC_Night"] is not None else np.nan,
+            "Emis_31": rasters["Emis_31"].read(1).flatten() if rasters["Emis_31"] is not None else np.nan,
+            "Emis_32": rasters["Emis_32"].read(1).flatten() if rasters["Emis_32"] is not None else np.nan,
+        })
+        raw_csv_path = os.path.join(dest_raw, f"{name}_{location}_{date}_MODISraw.csv")
+        df.to_csv(raw_csv_path, index=False)
+        print(f"Saved raw CSV: {raw_csv_path}")
+
+        valid = np.isfinite(df["LST_Day_1km"]).sum()
+        invalid = (~np.isfinite(df["LST_Day_1km"])).sum()
+        total = valid + invalid
+        print(f"Valid raw pixels: {valid}, Invalid: {invalid}, Total: {total}")
+        if total > 0 and invalid / total > 0.9:
+            print(f"Skipping {date} for aid {aid_number}: >90% invalid raw pixels.")
+            return
+
+
+        # Filtered CSV (masking by QC)
+        df["LST_Day_1km_f"] = lst_day_c.flatten() if lst_day_c is not None else np.nan
+        df["LST_Night_1km_f"] = lst_night_c.flatten() if lst_night_c is not None else np.nan
+
+        df.drop(columns=["LST_Day_1km", "LST_Night_1km", "QC_Day", "QC_Night", "Emis_31", "Emis_32"], inplace=True)
+
+        valid_f = np.isfinite(df["LST_Day_1km_f"]).sum()
+        invalid_f = (~np.isfinite(df["LST_Day_1km_f"])).sum()
+        total_f = valid_f + invalid_f
+        print(f"Valid filtered pixels: {valid_f}, Invalid: {invalid_f}, Total: {total_f}")
+        if total_f > 0 and invalid_f / total_f > 0.9:
+            print(f"Skipping {date} for aid {aid_number}: >90% invalid filtered pixels.")
+            return
+
+        filter_csv_path = os.path.join(dest_filtered, f"{name}_{location}_{date}_MODISfilter.csv")
+        df.to_csv(filter_csv_path, index=False)
+        print(f"Saved filtered CSV: {filter_csv_path}")
+
+        # Save processed LST data
+        if lst_day_c is not None:
+            lst_day_path = os.path.join(dest_filtered, f"{name}_{location}_{date}_lst_day.tif")
+            meta = rasters["LST_Day_1km"].meta.copy()
+            meta.update(dtype=rasterio.float32, count=1)
+            with rasterio.open(lst_day_path, "w", **meta) as dst:
+                dst.write(lst_day_c, 1)
+                print(f"Saved daytime LST: {lst_day_path}")
+                upload_to_supabase(bucket_name, SUPABASE_URL, SUPABASE_KEY, lst_day_path, name, location)
+                multi_files.append(lst_day_path)
+        if lst_night_c is not None:
+            lst_night_path = os.path.join(dest_filtered, f"{name}_{location}_{date}_lst_night.tif")
+            meta = rasters["LST_Night_1km"].meta.copy()
+            meta.update(dtype=rasterio.float32, count=1)
+            with rasterio.open(lst_night_path, "w", **meta) as dst:
+                dst.write(lst_night_c, 1)
+                print(f"Saved nighttime LST: {lst_night_path}")
+                upload_to_supabase(bucket_name, SUPABASE_URL, SUPABASE_KEY, lst_night_path, name, location)
+                multi_files.append(lst_night_path)
+
+        multi_aids.add(aid_number)
+        multi_files.extend([filter_csv_path, raw_csv_path])
+
+        upload_to_supabase(bucket_name, SUPABASE_URL, SUPABASE_KEY, filter_csv_path, name, location)
+        upload_to_supabase(bucket_name, SUPABASE_URL, SUPABASE_KEY, raw_csv_path, name, location)
+
+        log_file = os.path.join(log_path, f"updates_{timestamp}.txt")
+        os.makedirs(log_path, exist_ok=True)
+        with open(log_file, 'a', encoding='utf-8') as file:
+            if lst_day_c is not None:
+                file.write(f"Daytime LST {lst_day_path}\n")
+            if lst_night_c is not None:
+                file.write(f"Nighttime LST {lst_night_path}\n")
+                file.write(f"Raw raster {raw_tif_path}\n")
+                file.write(f"Raw CSV {raw_csv_path}\n")
+                file.write(f"Filtered CSV {filter_csv_path}\n")
+
+        print(f"Finished processing {date} (MODIS)")
+
+# Usage: process_rasters(aid_number, date, selected_files, product_type="ECO" or "MODIS")
 
 # Main function to process all new files using multiprocessing
 def process_all(all_new_files):
@@ -406,7 +540,8 @@ def process_all(all_new_files):
         for date in unique_dates:
             # Select files for this aid and date
             date_files = [f for f in aid_files if extract_metadata(f)[1] == date]
-            process_rasters(aid_number, date, date_files)
+            # process_rasters(aid_number, date, date_files)
+            process_rasters(aid_number, date, date_files, product_type="MODIS" if "MYD11A1" in date_files[0] else "ECO")
     print("Processing complete.")
 
 ### === 5. UPLOAD & CLEANUP FUNCTIONS ===
@@ -523,13 +658,13 @@ def log_updates():
 ### *MAIN EXECUTION PHASES
 
 # Phase 1: Submit task in one go
-task_request = build_task_request(product, layers, roi_json, start_date, end_date)
+task_request = build_task_request(product_MODIS, layers_MODIS, roi_json, start_date, end_date)
 task_id = submit_task(headers, task_request)
 print("All tasks submitted!")
 print(f"Task ID: {task_id}")
 
 # Phase 2: Create Directories and Mapping
-aid_folder_mapping = create_aid_folder_mapping(roi, raw_path)
+aid_folder_mapping = create_aid_folder_mapping(roi, eco_raw_path)
 
 # Phase 3: Check the status of the single task
 print("Checking task statuses...")
