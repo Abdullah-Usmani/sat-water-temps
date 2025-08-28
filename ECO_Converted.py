@@ -18,7 +18,7 @@ from pathlib import Path
 
 # Define directory paths
 eco_raw_path = Path(r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw")
-eco_filtered_path = Path(r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECO")
+eco_filtered_path = Path(r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOtest")
 myd_raw_path = Path(r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\MYD11A1raw")
 myd_filtered_path = Path(r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\MYD11A1")
 raw_download_path = Path(r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\downloads")
@@ -47,7 +47,13 @@ supabase_folder = f"{SUPABASE_URL}/storage/v1/object/public/{bucket_name}"
 # === Global State for Logging/Tracking ===
 # Load updated_aids and new_files from text.txt
 updated_aids = set()
+updated_aids = set(range(1, 133))
+# Gather all file paths under each aid folder in raw_download_path that start with "ECO_"
 new_files = []
+for root, _, files in os.walk(raw_download_path):
+    for file in files:
+        if file.startswith("ECO_"):
+            new_files.append(os.path.join(root, file))
 multi_aids = set()
 multi_files = []
 deleted_files = []
@@ -80,7 +86,7 @@ token = get_token(user, password)
 # Define the product and layers to request
 product = "ECO_L2T_LSTE.002"
 headers = { 'Authorization': f'Bearer {token}' }
-layers = ["LST", "LST_err", "QC", "water", "cloud", "EmisWB", "height"]
+layers = ["LST", "LST_err", "QC", "water", "cloud"]
 
 # Landsat-specific settings
 product_MODIS = "MYD11A1.061"  # MODIS/Aqua Land Surface Temperature/Emissivity Daily L3 Global 1km
@@ -96,10 +102,10 @@ layers_MODIS = [
 
 
 # Define the date range for the task
-end_date = datetime.now().strftime("%m-%d-%Y")
-end_date = "07-05-2025"
 start_date = (datetime.now() - timedelta(days=1)).strftime("%m-%d-%Y")
-start_date = "06-30-2025"
+start_date = "06-27-2025"
+end_date = datetime.now().strftime("%m-%d-%Y")
+end_date = "07-02-2025"
 
 # Load the area of interest (ROI)
 roi = gpd.read_file(roi_path)
@@ -214,7 +220,7 @@ def download_results(task_id, headers):
                     for chunk in download_response.iter_content(chunk_size=8192):
                         f.write(chunk)
                 new_files.append(local_filename)  # Track newly downloaded files
-                print(f","r"{local_filename}")
+                print(f"{local_filename}")
 
         else:
             # Handle general files without aid numbers (e.g., XML, CSV, JSON)
@@ -232,7 +238,7 @@ def download_results(task_id, headers):
                     f.write(chunk)
 
             new_files.append(local_filename)  # Track newly downloaded files
-            print(f","r"{local_filename}")
+            print(f"{local_filename}")
 
         file_path = f"updates_{timestamp}.txt"  # Each run creates a new file
         full_path = os.path.join(log_path, file_path)
@@ -242,7 +248,7 @@ def download_results(task_id, headers):
 
         # Open the file in append mode to ensure all writes are preserved
         with open(full_path, 'a', encoding='utf-8') as file:
-            file.write(f","r"{local_filename}\n")  # Log the file path
+            file.write(f"{local_filename}\n")  # Log the file path
 
 ### === 4. PROCESSING FUNCTIONS ===
 
@@ -295,13 +301,23 @@ def process_rasters(aid_number, date, selected_files, product_type="ECO"):
         os.makedirs(dest_filtered, exist_ok=True)
 
         # Read all required layers
-        layer_names = ["LST", "LST_err", "QC", "water", "cloud", "EmisWB", "height"]
+        layer_names = ["LST_doy", "LST_err", "QC", "water", "cloud"]
         rasters = {name: open_raster(name) for name in layer_names}
         if any(r is None for r in rasters.values()):
             print(f"Skipping {date} due to missing or unsupported layers.")
             return
 
+        # Rename "LST_doy" key to "LST" if present
+        if "LST_doy" in rasters:
+            rasters["LST"] = rasters.pop("LST_doy")
+
         arrays = {k: v.read(1) for k, v in rasters.items()}
+        # Check that all arrays have the same shape
+        shapes = [arr.shape for arr in arrays.values()]
+        if len(set(shapes)) > 1:
+            print(f"Skipping {date} for aid {aid_number}: Not all raster layers have the same shape: {shapes}")
+            return
+
         raw_tif_path = os.path.join(dest_raw, f"{name}_{location}_{date}_raw.tif")
         meta = rasters["LST"].meta.copy()
         meta.update(dtype=rasterio.float32, count=len(arrays))
@@ -332,12 +348,12 @@ def process_rasters(aid_number, date, selected_files, product_type="ECO"):
 
         INVALID_QC = {15, 2501, 3525, 65535}
         water_mask = df["water"].isin([1]).any()
-        for col in ["LST", "LST_err", "QC", "EmisWB", "height"]:
+        for col in ["LST", "LST_err"]:
             df[f"{col}_f"] = np.where(df["QC"].isin(INVALID_QC), np.nan, df[col])
-        for col in ["LST_f", "LST_err_f", "QC_f", "EmisWB_f", "height_f"]:
+        for col in ["LST_f", "LST_err_f"]:
             df[col] = np.where(df["cloud"] == 1, np.nan, df[col])
         if not water_mask:
-            for col in ["LST_f", "LST_err_f", "QC_f", "EmisWB_f", "height_f"]:
+            for col in ["LST_f", "LST_err_f"]:
                 df[col] = np.where(df["water"] == 0, np.nan, df[col])
             filter_csv_path = os.path.join(dest_filtered, f"{name}_{location}_{date}_filter_wtoff.csv")
             filter_tif_path = os.path.join(dest_filtered, f"{name}_{location}_{date}_filter_wtoff.tif")
@@ -345,7 +361,7 @@ def process_rasters(aid_number, date, selected_files, product_type="ECO"):
             filter_csv_path = os.path.join(dest_filtered, f"{name}_{location}_{date}_filter.csv")
             filter_tif_path = os.path.join(dest_filtered, f"{name}_{location}_{date}_filter.tif")
 
-        df.drop(columns=["LST", "LST_err", "QC", "EmisWB", "height"], inplace=True)
+        df.drop(columns=["LST", "LST_err"], inplace=True)
 
         valid = df["LST_f"].notna().sum()
         invalid = df["LST_f"].isna().sum()
@@ -360,12 +376,12 @@ def process_rasters(aid_number, date, selected_files, product_type="ECO"):
             meta.update(dtype=rasterio.float32, count=1)
             return data.reshape(rows, cols).astype(np.float32), meta
 
-        filtered_layers = ["LST_f", "LST_err_f", "QC_f", "EmisWB_f", "height_f"]
-        filtered_rasters = {k: arr_to_raster(df[k].values, rasters["LST"]) for k in filtered_layers}
-        filter_meta = filtered_rasters["LST_f"][1].copy()
-        filter_meta.update(count=len(filtered_rasters))
+        filtered_layers = ["LST_f", "LST_err_f", "QC"]
+        filtered_rasters = [arr_to_raster(df[k].values, rasters["LST"]) for k in filtered_layers]
+        filter_meta = rasters["LST"].meta.copy()
+        filter_meta.update(dtype=rasterio.float32, count=len(filtered_layers))
         with rasterio.open(filter_tif_path, "w", **filter_meta) as dst:
-            for idx, (k, (data, _)) in enumerate(filtered_rasters.items(), 1):
+            for idx, (data, _) in enumerate(filtered_rasters, 1):
                 dst.write(data, idx)
         print(f"Saved filtered raster: {filter_tif_path}")
 
@@ -408,6 +424,13 @@ def process_rasters(aid_number, date, selected_files, product_type="ECO"):
         rasters = {name: open_raster(name) for name in layer_names}
         if rasters["LST_Day_1km"] is None or rasters["QC_Day"] is None:
             print(f"Skipping {date} due to missing or unsupported daytime layers.")
+            return
+
+        # Check that all arrays have the same shape
+        arrays = {k: v.read(1) for k, v in rasters.items() if v is not None}
+        shapes = [arr.shape for arr in arrays.values()]
+        if len(set(shapes)) > 1:
+            print(f"Skipping {date} for aid {aid_number}: Not all raster layers have the same shape: {shapes}")
             return
 
         # Convert MODIS LST from Kelvin to Celsius (scale factor 0.02) // Not doing celsius conversion right now
@@ -658,6 +681,7 @@ def log_updates():
 ### *MAIN EXECUTION PHASES
 
 # Phase 1: Submit task in one go
+task_request = build_task_request(product, layers, roi_json, start_date, end_date)
 task_request = build_task_request(product_MODIS, layers_MODIS, roi_json, start_date, end_date)
 task_id = submit_task(headers, task_request)
 print("All tasks submitted!")
