@@ -18,7 +18,7 @@ from pathlib import Path
 
 # Define directory paths
 eco_raw_path = Path(r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOraw")
-eco_filtered_path = Path(r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOtest")
+eco_filtered_path = Path(r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\ECOtestNOtif3")
 myd_raw_path = Path(r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\MYD11A1raw")
 myd_filtered_path = Path(r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\MYD11A1")
 raw_download_path = Path(r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\Water Temp Sensors\downloads")
@@ -103,9 +103,9 @@ layers_MODIS = [
 
 # Define the date range for the task
 start_date = (datetime.now() - timedelta(days=1)).strftime("%m-%d-%Y")
-start_date = "06-27-2025"
+start_date = "07-01-2024"
 end_date = datetime.now().strftime("%m-%d-%Y")
-end_date = "07-02-2025"
+end_date = "07-06-2024"
 
 # Load the area of interest (ROI)
 roi = gpd.read_file(roi_path)
@@ -353,11 +353,11 @@ def process_rasters(aid_number, date, selected_files, product_type="ECO"):
         for col in ["LST_f", "LST_err_f"]:
             df[col] = np.where(df["cloud"] == 1, np.nan, df[col])
         if not water_mask:
-            for col in ["LST_f", "LST_err_f"]:
-                df[col] = np.where(df["water"] == 0, np.nan, df[col])
             filter_csv_path = os.path.join(dest_filtered, f"{name}_{location}_{date}_filter_wtoff.csv")
             filter_tif_path = os.path.join(dest_filtered, f"{name}_{location}_{date}_filter_wtoff.tif")
         else:
+            for col in ["LST_f", "LST_err_f"]:
+                df[col] = np.where(df["water"] == 0, np.nan, df[col])
             filter_csv_path = os.path.join(dest_filtered, f"{name}_{location}_{date}_filter.csv")
             filter_tif_path = os.path.join(dest_filtered, f"{name}_{location}_{date}_filter.tif")
 
@@ -376,7 +376,7 @@ def process_rasters(aid_number, date, selected_files, product_type="ECO"):
             meta.update(dtype=rasterio.float32, count=1)
             return data.reshape(rows, cols).astype(np.float32), meta
 
-        filtered_layers = ["LST_f", "LST_err_f", "QC"]
+        filtered_layers = ["LST_f", "LST_err_f", "QC", "water", "cloud"]
         filtered_rasters = [arr_to_raster(df[k].values, rasters["LST"]) for k in filtered_layers]
         filter_meta = rasters["LST"].meta.copy()
         filter_meta.update(dtype=rasterio.float32, count=len(filtered_layers))
@@ -682,7 +682,6 @@ def log_updates():
 
 # Phase 1: Submit task in one go
 task_request = build_task_request(product, layers, roi_json, start_date, end_date)
-task_request = build_task_request(product_MODIS, layers_MODIS, roi_json, start_date, end_date)
 task_id = submit_task(headers, task_request)
 print("All tasks submitted!")
 print(f"Task ID: {task_id}")

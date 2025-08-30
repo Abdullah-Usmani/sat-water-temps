@@ -277,10 +277,6 @@ def download_csv(feature_id, filename):
         print("Error downloading .tif file:", e)
         abort(404)
 
-# get all DOYs from the folder
-# show DOYs in selector
-# when DOY is selected, show the image for that DOY
-
 # Function to extract aid number and date from filename
 def extract_metadata(filename):
     aid_match = re.search(r'aid(\d{4})', filename)

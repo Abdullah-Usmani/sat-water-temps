@@ -14,7 +14,7 @@ app = Flask(__name__)
 # Define the external data directory
 root_folder = r"C:\Users\abdul\Documents\Uni\y2\2019 (SEGP)\\"
 
-BASE_PATH = "./Water Temp Sensors/ECOtestraw"  # Adjust path as needed
+BASE_PATH = "./Water Temp Sensors/ECO"  # Adjust path as needed
 
 
 GLOBAL_MIN = 273.15  # Kelvin
@@ -25,7 +25,7 @@ def index():
     return render_template('index.html')
 
 def extract_layer(filename):
-    match = re.search(r'ECOtest_L2T_LSTE\.002_([A-Za-z]+(?:_err)?)_', filename)
+    match = re.search(r'ECO_L2T_LSTE\.002_([A-Za-z]+(?:_err)?)_', filename)
     return match.group(1) if match else "unknown"
 
 # Register it as a Jinja filter
@@ -52,7 +52,7 @@ def feature_page(feature_id):
 
 @app.route('/feature/<feature_id>/archive')
 def feature_archive(feature_id):
-    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECOtest', feature_id, 'lake')
+    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
     # Add data_folder check for RIVER folder
 
     if not os.path.isdir(data_folder):
@@ -64,7 +64,7 @@ def feature_archive(feature_id):
 
 @app.route('/serve_tif_as_png/<feature_id>/<filename>')
 def serve_tif_as_png(feature_id, filename):
-    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECOtest', feature_id, 'lake')
+    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
     tif_path = os.path.join(data_folder, filename)
 
     if not os.path.exists(tif_path):
@@ -77,7 +77,7 @@ def serve_tif_as_png(feature_id, filename):
 def get_latest_lst_tif(feature_id, scale='relative'):
     """Finds and returns the latest .tif file in the specified folder."""
 
-    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECOtest', feature_id, 'lake')
+    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
 
     filtered_files = [os.path.join(data_folder, file) for file in os.listdir(data_folder) if file.endswith('.tif')]
 
@@ -92,7 +92,7 @@ def get_latest_lst_tif(feature_id, scale='relative'):
     
 @app.route('/feature/<feature_id>/temperature')
 def get_latest_temperature(feature_id):
-    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECOtest', feature_id, 'lake')
+    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
     csv_files = [os.path.join(data_folder, file) for file in os.listdir(data_folder) if file.endswith('.csv')]
 
     if not csv_files:
@@ -114,13 +114,13 @@ def get_latest_temperature(feature_id):
     min_max_values = [temp_data[lst_col].min(), temp_data[lst_col].max()]
 
     return jsonify({
-        "data": temp_data.to_dict(orient='recotestrds'),
+        "data": temp_data.to_dict(orient='records'),
         "min_max": min_max_values
     })
 
 @app.route('/feature/<feature_id>/get_dates')
 def get_doys(feature_id):
-    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECOtest', feature_id, 'lake')
+    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
     if not os.path.isdir(data_folder):
         abort(404)
 
@@ -130,7 +130,7 @@ def get_doys(feature_id):
 
 @app.route('/feature/<feature_id>/tif/<doy>/<scale>')
 def get_tif_by_doy(feature_id, doy, scale):
-    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECOtest', feature_id, 'lake')
+    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
     tif_files = [f for f in os.listdir(data_folder) if f.endswith('.tif')]
 
     for tif_file in tif_files:
@@ -144,7 +144,7 @@ def get_tif_by_doy(feature_id, doy, scale):
 
 @app.route('/feature/<feature_id>/temperature/<doy>')
 def get_temperature_by_doy(feature_id, doy):
-    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECOtest', feature_id, 'lake')
+    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
     csv_files = [os.path.join(data_folder, file) for file in os.listdir(data_folder) if file.endswith('.csv')]
 
     for csv_file in csv_files:
@@ -164,14 +164,14 @@ def get_temperature_by_doy(feature_id, doy):
             min_max_values = [temp_data[lst_col].min(), temp_data[lst_col].max()]
             
             return jsonify({
-                "data": temp_data.to_dict(orient='recotestrds'),
+                "data": temp_data.to_dict(orient='records'),
                 "min_max": min_max_values
             })
 
             
 @app.route('/feature/<feature_id>/check_wtoff/<date>')
 def check_wtoff(feature_id, date):
-    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECOtest', feature_id, 'lake')
+    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
     
     if not os.path.isdir(data_folder):
         abort(404)
@@ -183,13 +183,13 @@ def check_wtoff(feature_id, date):
         return jsonify({"error": "Failed to fetch files"}), 500
 
     if tif_files:
-        return jsonify({"wtoff": False, "files": tif_files})
+        return jsonify({"wtoff": True, "files": tif_files})
     else:
-        return jsonify({"wtoff": True})
+        return jsonify({"wtoff": False})
 
 @app.route('/download_tif/<feature_id>/<filename>')
 def download_tif(feature_id, filename):
-    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECOtest', feature_id, 'lake')
+    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
     file_path = os.path.join(data_folder, filename)
     
     if os.path.exists(file_path):
@@ -201,7 +201,7 @@ def download_tif(feature_id, filename):
 def download_csv(feature_id, filename):
     filename = filename.replace(".tif", ".csv")  # Change the file extension to .csv
     
-    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECOtest', feature_id, 'lake')
+    data_folder = os.path.join(root_folder, 'Water Temp Sensors', 'ECO', feature_id, 'lake')
     file_path = os.path.join(data_folder, filename)
     
 
